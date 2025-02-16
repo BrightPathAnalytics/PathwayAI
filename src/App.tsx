@@ -1,3 +1,4 @@
+/*
 import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { useAuthenticator } from '@aws-amplify/ui-react';
@@ -42,6 +43,24 @@ function App() {
           Review next step of this tutorial.
         </a>
       </div>
+      <button onClick={signOut}>Sign out</button>
+    </main>
+  );
+}
+
+export default App;
+*/
+import { useAuthenticator } from '@aws-amplify/ui-react';
+import Chatbot from './Chatbot'; // Adjust the path if Chatbot.tsx is located elsewhere
+
+function App() {
+  const { user, signOut } = useAuthenticator();
+
+  return (
+    <main>
+      <h1>{user?.signInDetails?.loginId}'s Conversation</h1>
+      {/* Render the Chatbot component as the main content */}
+      <Chatbot />
       <button onClick={signOut}>Sign out</button>
     </main>
   );

@@ -7,8 +7,17 @@ import '@aws-amplify/ui-react/styles.css';
 import { Amplify } from "aws-amplify";
 import outputs from "../amplify_outputs.json";
 import '@aws-amplify/ui-react/styles.css';
+import { parseAmplifyConfig } from "aws-amplify/utils";
 
-Amplify.configure(outputs);
+const amplifyConfig = parseAmplifyConfig(outputs);
+
+Amplify.configure({
+  ...amplifyConfig,
+  API: {
+    ...amplifyConfig.API,
+    REST: outputs.custom.API,
+  },
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
