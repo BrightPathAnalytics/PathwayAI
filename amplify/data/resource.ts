@@ -12,6 +12,20 @@ const schema = a.schema({
       content: a.string(),
     })
     .authorization((allow) => [allow.owner()]),
+
+    // New ChatHistory model for storing user chat histories
+  ChatHistory: a
+  .model({
+    // You might automatically capture the owner using the owner-based authorization below
+    // For example, you might not even need a userId field if you use the owner rule.
+    // But if you want to store additional user info, you can include it:
+    userId: a.string(),
+    // Store the chat content, could be a single message or a conversation (JSON string)
+    content: a.string(),
+    // Timestamp for when the chat entry was created
+    createdAt: a.datetime(),
+  })
+  .authorization((allow) => [allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
