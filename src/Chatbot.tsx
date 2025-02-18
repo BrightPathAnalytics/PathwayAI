@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
 import { post } from 'aws-amplify/api';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../amplify/data/resource';
-
-// Generate the data client from your backend schema
-const client = generateClient<Schema>();
 
 interface ChatbotResponse {
   response: string;
@@ -12,27 +7,8 @@ interface ChatbotResponse {
 
 const Chatbot: React.FC = () => {
   const [message, setMessage] = useState<string>('');
-  const [chatHistory, setChatHistory] = useState<string[]>([]);
   const [responseText, setResponseText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-
-  // Saves a chat entry to your ChatHistory model
-  async function saveChatHistory(chatContent: string): Promise<void> {
-    try {
-      const newEntry = await client.models.ChatHistory.create({
-        content: chatContent,
-        createdAt: new Date().toISOString(),
-      });
-      console.log('Chat saved:', newEntry);
-      setChatHistory((prev) => [...prev, chatContent]);
-    } catch (error: unknown) {
-      let errMessage = "Unknown error";
-      if (error instanceof Error) {
-        errMessage = error.message;
-      }
-      console.error("Error saving chat:", errMessage);
-    }
-  }
 
   // Sends a chat message to the REST API and handles the response
   async function sendChatMessage(): Promise<void> {
@@ -43,8 +19,8 @@ const Chatbot: React.FC = () => {
     try {
       // Call the REST API endpoint for the chatbot
       const restOperation = post({
-        apiName: 'myRestApi', // Ensure this matches your Amplify API name
-        path: '/chat',        // Ensure this matches your API resource path
+        apiName: 'PathwayAIMVP', // Ensure this matches your Amplify API name
+        path: 'chat',        // Ensure this matches your API resource path
         options: {
           body: { message },
         },
@@ -60,10 +36,6 @@ const Chatbot: React.FC = () => {
       
       // Update the latest response state
       setResponseText(chatbotResponse.response);
-      
-      // Save both the user's message and the bot's reply in chat history
-      await saveChatHistory(`You: ${message}`);
-      await saveChatHistory(`Bot: ${chatbotResponse.response}`);
     } catch (error: unknown) {
       let errMessage = "Unknown error";
       if (error instanceof Error) {
@@ -88,18 +60,10 @@ const Chatbot: React.FC = () => {
           placeholder="Type your message..."
         />
         <button onClick={sendChatMessage} disabled={loading}>
-          {loading ? "Sending..." : "Send"}
+          {loading ? 'Sending...' : 'Send'}
         </button>
       </div>
-      <div>
-        <h3>Chat History</h3>
-        <ul>
-          {chatHistory.map((msg, index) => (
-            <li key={index}>{msg}</li>
-          ))}
-        </ul>
-      </div>
-      <p>Latest Response: {responseText}</p>
+      <p><strong>Response:</strong> {responseText}</p>
     </div>
   );
 };
