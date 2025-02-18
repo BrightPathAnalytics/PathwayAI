@@ -18,10 +18,10 @@ Amplify.configure({
   API: {
     ...amplifyConfig.API,
     REST: {
-      PathwayAIMVP: {
-        endpoint: externalAPIEndpoint.endpoint
+        PathwayAIMVP: {
+          endpoint: externalAPIEndpoint.endpoint
+        },
       }
-    }
   },
 });
 

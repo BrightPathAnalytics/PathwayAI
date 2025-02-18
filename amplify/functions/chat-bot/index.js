@@ -12,6 +12,11 @@ export async function handler(event) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Missing "message" in request body' }),
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'OPTIONS,POST',
+        },
       };
     }
 
@@ -42,12 +47,22 @@ export async function handler(event) {
     return {
       statusCode: 200,
       body: JSON.stringify({ response: completion }),
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'OPTIONS,POST',
+      },
     };
   } catch (error) {
     console.error('Error handling chat interaction:', error.response ? error.response.data : error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Internal server error' }),
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'OPTIONS,POST',
+      },
     };
   }
 }
