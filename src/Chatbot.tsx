@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { fetchAuthSession } from '@aws-amplify/auth';  // ✅ Corrected import for authentication
-import { post } from '@aws-amplify/api-rest';  // ✅ Corrected import for REST API calls
+//import { post } from '@aws-amplify/api-rest';  // ✅ Corrected import for REST API calls
 
 const Chatbot: React.FC = () => {
   const [message, setMessage] = useState<string>('');
@@ -21,19 +21,18 @@ const Chatbot: React.FC = () => {
         throw new Error("User is not authenticated.");
       }
   
-      // 🔹 Call the API with the Authorization header
-      const restOperation = post({
-        apiName: "PathwayAIMVP",
-        path: "/chat",
-        options: {
-          headers: {
-            Authorization: `Bearer ${idToken}`, // ✅ Send Cognito token
-          },
-          body: { message },
-        },
-      });
+      // 🔹 Directly call API Gateway with fetch()
+    const response = await fetch("https://1mc0l359rl.execute-api.us-west-2.amazonaws.com/Prod/chat", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${idToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message }),
+    });
 
-      setResponseText(restOperation as unknown as string);
+    const jsonData = await response.json();
+    setResponseText(jsonData.response ?? "No response received");
     } catch (error) {
       console.error("Error sending chat message:", error);
       setResponseText("Error: Unable to get a response");
