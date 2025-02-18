@@ -20,7 +20,7 @@ const Chatbot: React.FC = () => {
       // Call the REST API endpoint for the chatbot
       const restOperation = post({
         apiName: 'PathwayAIMVP', // Ensure this matches your Amplify API name
-        path: 'chat',        // Ensure this matches your API resource path
+        path: '/chat',        // Ensure this matches your API resource path
         options: {
           body: { message },
         },
