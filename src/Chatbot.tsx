@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
-import { post } from 'aws-amplify/api';
-
-interface ChatbotResponse {
-  response: string;
-}
+import { fetchAuthSession } from '@aws-amplify/auth';  // ✅ Corrected import for authentication
+import { post } from '@aws-amplify/api-rest';  // ✅ Corrected import for REST API calls
 
 const Chatbot: React.FC = () => {
   const [message, setMessage] = useState<string>('');
@@ -11,44 +8,35 @@ const Chatbot: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   // Sends a chat message to the REST API and handles the response
-  async function sendChatMessage(): Promise<void> {
-    if (!message.trim()) {
-      return;
-    }
+  async function sendChatMessage() {
+    if (!message.trim()) return;
+  
     setLoading(true);
     try {
-      // Call the REST API endpoint for the chatbot
+      // 🔹 Fetch the user's authentication session
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+  
+      if (!idToken) {
+        throw new Error("User is not authenticated.");
+      }
+  
+      // 🔹 Call the API with the Authorization header
       const restOperation = post({
-        apiName: 'PathwayAIMVP', // Ensure this matches your Amplify API name
-        path: '/chat',        // Ensure this matches your API resource path
+        apiName: "PathwayAIMVP",
+        path: "/chat",
         options: {
-          body: { message },
           headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Allow-Methods': 'OPTIONS,POST',
+            Authorization: `Bearer ${idToken}`, // ✅ Send Cognito token
           },
+          body: { message },
         },
       });
-      
-      const { body } = await restOperation.response;
-      if (!body) {
-        throw new Error("Response body is null");
-      }
-      const jsonData = await body.json();
-      const chatbotResponse = jsonData as unknown as ChatbotResponse;
-      console.log("Chatbot response:", chatbotResponse);
-      
-      // Update the latest response state
-      setResponseText(chatbotResponse.response);
-    } catch (error: unknown) {
-      let errMessage = "Unknown error";
-      if (error instanceof Error) {
-        errMessage = error.message;
-      }
-      console.error("Error sending chat message:", errMessage);
-      setResponseText("Error: " + errMessage);
+
+      setResponseText(restOperation as unknown as string);
+    } catch (error) {
+      console.error("Error sending chat message:", error);
+      setResponseText("Error: Unable to get a response");
     } finally {
       setLoading(false);
       setMessage('');
