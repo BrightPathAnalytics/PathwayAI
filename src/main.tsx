@@ -9,7 +9,7 @@ import outputs from "../amplify_outputs.json";
 import '@aws-amplify/ui-react/styles.css';
 import { parseAmplifyConfig } from "aws-amplify/utils";
 
-const externalAPIEndpoint = { name: "PathwayAIMVP", endpoint: "https://1mc0l359rl.execute-api.us-west-2.amazonaws.com/Prod"}
+// const externalAPIEndpoint = { name: "PathwayAIMVP", endpoint: "https://1mc0l359rl.execute-api.us-west-2.amazonaws.com/Prod"}
 
 const amplifyConfig = parseAmplifyConfig(outputs);
 
@@ -17,11 +17,7 @@ Amplify.configure({
   ...amplifyConfig,
   API: {
     ...amplifyConfig.API,
-    REST: {
-        PathwayAIMVP: {
-          endpoint: externalAPIEndpoint.endpoint
-        },
-      }
+    REST: outputs.custom.API,
   },
 });
 

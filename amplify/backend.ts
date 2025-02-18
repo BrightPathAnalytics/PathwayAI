@@ -1,15 +1,15 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
-import { Stack } from "aws-cdk-lib";
-import {
-  AuthorizationType,
-  CognitoUserPoolsAuthorizer,
-  Cors,
-  LambdaIntegration,
-  RestApi,
-} from "aws-cdk-lib/aws-apigateway";
-import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
+//import { Stack } from "aws-cdk-lib";
+//import {
+  // AuthorizationType,
+  // CognitoUserPoolsAuthorizer,
+  // Cors,
+  // LambdaIntegration,
+  // RestApi,
+// } from "aws-cdk-lib/aws-apigateway";
+// import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { chatbotApiFunction } from "./functions/chat-bot/resource";
 //import { HelloWorldLambdaStack } from './functions/resources';
 
@@ -20,13 +20,13 @@ const backend = defineBackend({
 });
 
 
-
+/*
 // create a new API stack
-const apiStack = backend.createStack("api-stack");
+const apiStack = backend.createStack("PathwayAIMVP-stack");
 
 // create a new REST API
-const myRestApi = new RestApi(apiStack, "RestApi", {
-  restApiName: "myRestApi",
+const pathwayAIApi = new RestApi(apiStack, "RestApi", {
+  restApiName: "PathwayAIMVP",
   deploy: true,
   deployOptions: {
     stageName: "dev",
@@ -44,13 +44,13 @@ const lambdaIntegration = new LambdaIntegration(
 );
 
 // create a new Cognito User Pools authorizer
-const cognitoAuth = new CognitoUserPoolsAuthorizer(apiStack, "CognitoAuth", {
-  cognitoUserPools: [backend.auth.resources.userPool],
-});
-const chatPath = myRestApi.root.addResource("chat");
+// const cognitoAuth = new CognitoUserPoolsAuthorizer(apiStack, "CognitoAuth", {
+//   cognitoUserPools: [backend.auth.resources.userPool],
+// });
+const chatPath = pathwayAIApi.root.addResource("chat");
 chatPath.addMethod("POST", lambdaIntegration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer: cognitoAuth,
+  authorizationType: AuthorizationType.NONE,
+  // authorizer: cognitoAuth,
 });
 
 // Optionally, add a proxy resource if you want to support additional methods:
@@ -60,11 +60,11 @@ chatPath.addMethod("POST", lambdaIntegration, {
 // });
 
 // create a new resource path with Cognito authorization
-const booksPath = myRestApi.root.addResource("cognito-auth-path");
-booksPath.addMethod("GET", lambdaIntegration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer: cognitoAuth,
-});
+// const booksPath = myRestApi.root.addResource("cognito-auth-path");
+// booksPath.addMethod("GET", lambdaIntegration, {
+//   authorizationType: AuthorizationType.NONE,
+//   //authorizer: cognitoAuth,
+// });
 
 // create a new IAM policy to allow Invoke access to the API
 const apiRestPolicy = new Policy(apiStack, "RestApiPolicy", {
@@ -72,9 +72,9 @@ const apiRestPolicy = new Policy(apiStack, "RestApiPolicy", {
     new PolicyStatement({
       actions: ["execute-api:Invoke"],
       resources: [
-        `${myRestApi.arnForExecuteApi("*", "/chat", "dev")}`,
-        `${myRestApi.arnForExecuteApi("*", "/chat/*", "dev")}`,
-        `${myRestApi.arnForExecuteApi("*", "/cognito-auth-path", "dev")}`,
+        `${pathwayAIApi.arnForExecuteApi("*", "/chat", "dev")}`,
+        `${pathwayAIApi.arnForExecuteApi("*", "/chat/*", "dev")}`,
+        `${pathwayAIApi.arnForExecuteApi("*", "/cognito-auth-path", "dev")}`,
       ],
     }),
   ],
@@ -87,15 +87,15 @@ backend.auth.resources.authenticatedUserIamRole.attachInlinePolicy(
 backend.auth.resources.unauthenticatedUserIamRole.attachInlinePolicy(
   apiRestPolicy
 );
-
+*/
 // add outputs to the configuration file
 backend.addOutput({
   custom: {
     API: {
-      [myRestApi.restApiName]: {
-        endpoint: myRestApi.url,
-        region: Stack.of(myRestApi).region,
-        apiName: myRestApi.restApiName,
+      ["PathwayAIMVP"]: {
+        endpoint: "https://1mc0l359rl.execute-api.us-west-2.amazonaws.com/Prod",
+        region: "us-west-2",
+        apiName: "PathwayAIMVP",
       },
     },
   },

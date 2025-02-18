@@ -23,6 +23,12 @@ const Chatbot: React.FC = () => {
         path: '/chat',        // Ensure this matches your API resource path
         options: {
           body: { message },
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST',
+          },
         },
       });
       
