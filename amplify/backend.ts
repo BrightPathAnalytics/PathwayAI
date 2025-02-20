@@ -10,13 +10,11 @@ import { data } from './data/resource';
   // RestApi,
 // } from "aws-cdk-lib/aws-apigateway";
 // import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
-import { chatbotApiFunction } from "./functions/chat-bot/resource";
 //import { HelloWorldLambdaStack } from './functions/resources';
 
 const backend = defineBackend({
   auth,
   data,
-  chatbotApiFunction,
 });
 
 

@@ -50,18 +50,18 @@ function App() {
 
 export default App;
 */
+import React from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import Chatbot from './Chatbot'; // Adjust the path if Chatbot.tsx is located elsewhere
+import Chatbot from './componets/Chat'; // Adjust the path if Chat.tsx is located elsewhere
 
 function App() {
-  const { user, signOut } = useAuthenticator();
+  const { user } = useAuthenticator();
 
   return (
     <main>
-      <h1>{user?.signInDetails?.loginId}'s Conversation</h1>
+      {/* <h1>{user?.signInDetails?.loginId}'s Conversation</h1> */}
       {/* Render the Chatbot component as the main content */}
       <Chatbot />
-      <button onClick={signOut}>Sign out</button>
     </main>
   );
 }
