@@ -73,13 +73,16 @@
 // export default Chat;
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Chat.css';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import Sidebar from './Sidebar'; // Import the Sidebar component
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCog } from '@fortawesome/free-solid-svg-icons';
 import { fetchAuthSession } from '@aws-amplify/auth';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { v4 as uuidv4 } from "uuid";
 
 interface Message {
   id: number;
@@ -91,7 +94,47 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const { user, signOut } = useAuthenticator();
+  const [/*conversationId*/, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const fetchConversation = async (convId: string) => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      if (!idToken) throw new Error("User is not authenticated.");
+
+      const response = await fetch("https://1mc0l359rl.execute-api.us-west-2.amazonaws.com/Prod/chat", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ conversationId: convId }),
+      });
+
+      const jsonData = await response.json();
+      setMessages(jsonData.history || []);
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+    }
+  };
+
+  useEffect(() => {
+    const storedConversationId = localStorage.getItem("conversationId");
+    if (storedConversationId) {
+      setConversationId(storedConversationId);
+      fetchConversation(storedConversationId);
+    } else {
+      const newConversationId = uuidv4();
+      setConversationId(newConversationId);
+      localStorage.setItem("conversationId", newConversationId);
+    }
+  }, []);
 
   const sendChatMessage = async (message: string): Promise<string> => {
     if (!message.trim()) return "No message provided";
@@ -165,7 +208,7 @@ const Chat: React.FC = () => {
       <div className="messages">
         {messages.map((message) => (
           <div key={message.id} className={`message ${message.sender}`}>
-            {message.text}
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
           </div>
         ))}
       </div>
