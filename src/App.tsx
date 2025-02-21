@@ -50,12 +50,12 @@ function App() {
 
 export default App;
 */
-import React from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+//import React from 'react';
+//import { useAuthenticator } from '@aws-amplify/ui-react';
 import Chatbot from './componets/Chat'; // Adjust the path if Chat.tsx is located elsewhere
 
 function App() {
-  const { user } = useAuthenticator();
+  //const { user } = useAuthenticator();
 
   return (
     <main>
