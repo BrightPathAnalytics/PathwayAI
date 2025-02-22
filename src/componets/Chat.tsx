@@ -1,84 +1,9 @@
-// import React, { useState } from 'react';
-// import './Chat.css';
-// import { useAuthenticator } from '@aws-amplify/ui-react';
-// import Sidebar from './Sidebar'; // Import the Sidebar component
-// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// import { faCog } from '@fortawesome/free-solid-svg-icons';
-
-// interface Message {
-//   id: number;
-//   text: string;
-//   sender: 'user' | 'bot';
-// }
-
-// const Chat: React.FC = () => {
-//   const [messages, setMessages] = useState<Message[]>([]);
-//   const [input, setInput] = useState('');
-//   const { user, signOut } = useAuthenticator();
-
-//   const sendMessage = async () => {
-//     if (input.trim() === '') return;
-
-//     const userMessage: Message = {
-//       id: messages.length + 1,
-//       text: input,
-//       sender: 'user',
-//     };
-
-//     setMessages([...messages, userMessage]);
-//     setInput('');
-
-//     // Hardcoded bot response
-//     const botMessage: Message = {
-//       id: messages.length + 2,
-//       text: 'This is a hardcoded response from the bot.',
-//       sender: 'bot',
-//     };
-
-//     setMessages((prevMessages) => [...prevMessages, botMessage]);
-//   };
-
-//   return (
-//     <div className="chat-container">
-//       <Sidebar /> {/* Add the Sidebar component */}
-//       <div className="chat-header">
-//         <span className="user-info">{user?.signInDetails?.loginId}'s Conversation</span>
-//         <div className="header-buttons">
-//           <button className="settings-button">
-//             <FontAwesomeIcon icon={faCog} />
-//           </button>
-//           <button className="sign-out-button" onClick={signOut}>Sign out</button>
-//         </div>
-//       </div>
-//       <div className="messages">
-//         {messages.map((message) => (
-//           <div key={message.id} className={`message ${message.sender}`}>
-//             {message.text}
-//           </div>
-//         ))}
-//       </div>
-//       <div className="input-container">
-//         <input
-//           type="text"
-//           value={input}
-//           onChange={(e) => setInput(e.target.value)}
-//           onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-//         />
-//         <button onClick={sendMessage}>Send</button>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Chat;
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import './Chat.css';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import Sidebar from './Sidebar'; // Import the Sidebar component
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCog } from '@fortawesome/free-solid-svg-icons';
+import { faCog, faCommentDots } from '@fortawesome/free-solid-svg-icons';
 import { fetchAuthSession } from '@aws-amplify/auth';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -94,8 +19,12 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const { user, signOut } = useAuthenticator();
-  const [/*conversationId*/, setConversationId] = useState<string | null>(null);
+  //const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -127,11 +56,11 @@ const Chat: React.FC = () => {
   useEffect(() => {
     const storedConversationId = localStorage.getItem("conversationId");
     if (storedConversationId) {
-      setConversationId(storedConversationId);
+      //setConversationId(storedConversationId);
       fetchConversation(storedConversationId);
     } else {
       const newConversationId = uuidv4();
-      setConversationId(newConversationId);
+      //rsetConversationId(newConversationId);
       localStorage.setItem("conversationId", newConversationId);
     }
   }, []);
@@ -193,13 +122,34 @@ const Chat: React.FC = () => {
     setMessages((prevMessages) => [...prevMessages, botMessage]);
   };
 
+  const handleSidebarToggle = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleFeedbackToggle = () => {
+    setIsFeedbackOpen(!isFeedbackOpen);
+  };
+
+  const handleSettingsToggle = () => {
+    setIsSettingsOpen(!isSettingsOpen);
+  };
+
+  const handleFeedbackSubmit = () => {
+    console.log('Feedback submitted:', feedback);
+    setIsFeedbackOpen(false);
+    setFeedback('');
+  };
+
   return (
-    <div className="chat-container">
-      <Sidebar /> {/* Add the Sidebar component */}
+    <div className={`chat-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+      <Sidebar onToggle={handleSidebarToggle} isOpen={isSidebarOpen} /> {/* Add the Sidebar component */}
       <div className="chat-header">
         <span className="user-info">{user?.signInDetails?.loginId}'s Conversation</span>
         <div className="header-buttons">
-          <button className="settings-button">
+          <button className="feedback-button" onClick={handleFeedbackToggle}>
+            <FontAwesomeIcon icon={faCommentDots} />
+          </button>
+          <button className="settings-button" onClick={handleSettingsToggle}>
             <FontAwesomeIcon icon={faCog} />
           </button>
           <button className="sign-out-button" onClick={signOut}>Sign out</button>
@@ -211,6 +161,7 @@ const Chat: React.FC = () => {
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
           </div>
         ))}
+        <div ref={chatEndRef} />
       </div>
       <div className="input-container">
         <input
@@ -223,6 +174,24 @@ const Chat: React.FC = () => {
           {loading ? 'Sending...' : 'Send'}
         </button>
       </div>
+      {isFeedbackOpen && (
+        <div className="feedback-popup">
+          <h3>Feedback</h3>
+          <textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="Enter your feedback here..."
+          />
+          <button onClick={handleFeedbackSubmit}>Submit</button>
+        </div>
+      )}
+      {isSettingsOpen && (
+        <div className="settings-popup">
+          <h3>Settings</h3>
+          <p>Settings content goes here...</p>
+          <button onClick={handleSettingsToggle}>Close</button>
+        </div>
+      )}
     </div>
   );
 };
