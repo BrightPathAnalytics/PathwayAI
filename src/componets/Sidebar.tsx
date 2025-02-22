@@ -9,6 +9,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ onToggle, isOpen }) => {
   const createNewChat = () => {
     // Logic to create a new chat
+    // TODO: Implement this
     console.log('New chat created');
   };
 

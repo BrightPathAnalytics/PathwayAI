@@ -152,6 +152,7 @@ const Chat: React.FC = () => {
     console.log('Feedback submitted:', feedback);
     setIsFeedbackOpen(false);
     setFeedback('');
+    /* Logic to submit feedback */
   };
 
   return (
