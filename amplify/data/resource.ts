@@ -1,4 +1,3 @@
-/* temporarily removing data resource
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
 const schema = a.schema({
@@ -20,28 +19,4 @@ export const data = defineData({
       expiresInDays: 30,
     },
   },
-});
-*/
-import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
-
-const schema = a.schema({
-  Todo: a
-    .model({
-      content: a.string(),
-    })
-    // 🚨 Temporarily allow 
-    .authorization((allow) => [allow.publicApiKey()]), // ✅ Keep existing model
-});
-
-export type Schema = ClientSchema<typeof schema>;
-
-export const data = defineData({
-  schema,
-  // 🚨 Temporarily remove authorizationModes to avoid errors
-  // authorizationModes: {
-  //   defaultAuthorizationMode: "userPool",
-  //   apiKeyAuthorizationMode: {
-  //     expiresInDays: 30,
-  //   },
-  // },
 });
