@@ -29,8 +29,8 @@ const schema = a.schema({
     .model({
       content: a.string(),
     })
-    // 🚨 Temporarily remove authorization to avoid errors
-    //.authorization((allow) => [allow.owner()]), // ✅ Keep existing model
+    // 🚨 Temporarily allow 
+    .authorization((allow) => [allow.publicApiKey()]), // ✅ Keep existing model
 });
 
 export type Schema = ClientSchema<typeof schema>;
