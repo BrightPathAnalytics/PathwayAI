@@ -11,10 +11,10 @@ const backend = defineBackend({
 backend.addOutput({
   custom: {
     API: {
-      ["PathwayAIMVP"]: {
-        endpoint: "https://1mc0l359rl.execute-api.us-west-2.amazonaws.com/Prod",
+      ["PathwayAIMVP-Dev"]: {
+        endpoint: "https://fccnypowoe.execute-api.us-west-2.amazonaws.com/Prod",
         region: "us-west-2",
-        apiName: "PathwayAIMVP",
+        apiName: "PathwayAIMVP-Dev",
       },
     },
   },
