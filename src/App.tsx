@@ -1,9 +1,9 @@
-import Chatbot from './componets/Chat';
+import Chat from './components/Chat/Chat';
 
 function App() {
   return (
     <main>
-      <Chatbot />
+      <Chat />
     </main>
   );
 }
