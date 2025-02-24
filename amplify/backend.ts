@@ -11,10 +11,17 @@ const backend = defineBackend({
 backend.addOutput({
   custom: {
     API: {
-      ["PathwayAIMVP-Dev"]: {
-        endpoint: "https://fccnypowoe.execute-api.us-west-2.amazonaws.com/Prod",
+      ["ChatRestApi"]: {
+        endpoint: "https://mlc2bq2561.execute-api.us-west-2.amazonaws.com/Prod/chat",
         region: "us-west-2",
-        apiName: "PathwayAIMVP-Dev",
+        apiName: "ChatRestApi",
+      },
+    },
+    WebSocket: {
+      ["ChatWebSocket"]: {
+        endpoint: "wss://8vmg6i5bve.execute-api.us-west-2.amazonaws.com/Prod/",
+        region: "us-west-2",
+        apiName: "ChatWebSocket",
       },
     },
   },
