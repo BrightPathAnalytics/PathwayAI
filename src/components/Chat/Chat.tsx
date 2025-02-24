@@ -265,6 +265,7 @@ const Chat: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [connectionId, setConnectionId] = useState<string | null>(null);
   //const [socket, setSocket] = useState<WebSocket | null>(null);
 
   useEffect(() => {
@@ -279,6 +280,11 @@ const Chat: React.FC = () => {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        // If the server sends the connectionId in a dedicated message, capture it:
+        if (data.connectionId) {
+        setConnectionId(data.connectionId);
+        }
+        // Otherwise, process streaming chunks as before...
         if (data.text) {
           // Update the last bot message by appending the new text chunk
           setMessages(prevMessages => {
@@ -348,6 +354,7 @@ const Chat: React.FC = () => {
   const sendChatMessage = async (message: string): Promise<string> => {
     if (!message.trim()) return "No message provided";
     if (!conversationId) return "Error: Conversation ID is missing";
+    if (!connectionId) return "Error: WebSocket connection is not established";
 
     setLoading(true);
     try {
@@ -365,6 +372,7 @@ const Chat: React.FC = () => {
           userId: user?.username,
           conversationId,
           message,
+          connectionId,
         }),
       });
 
