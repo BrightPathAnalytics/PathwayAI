@@ -246,6 +246,9 @@ export default Chat;
   import ReactMarkdown from "react-markdown";
   import remarkGfm from "remark-gfm";
   
+  // Import our custom WebSocket hook and its type.
+  import useWebSocket, { WebSocketMessage } from '../../hooks/useWebSocket';
+  
   interface Message {
     id: number;
     text: string;
@@ -263,59 +266,41 @@ export default Chat;
     const [feedback, setFeedback] = useState('');
     const chatEndRef = useRef<HTMLDivElement>(null);
     const [connectionId, setConnectionId] = useState<string | null>(null);
-    const wsRef = useRef<WebSocket | null>(null);
   
-    // Scroll to bottom when messages update
+    // Scroll to bottom when messages update.
     useEffect(() => {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
   
-    // Establish WebSocket connection and capture connectionId from backend.
-    useEffect(() => {
-      const ws = new WebSocket("wss://8vmg6i5bve.execute-api.us-west-2.amazonaws.com/Prod/");
-      wsRef.current = ws;
-      console.log("Attempting to connect to WebSocket...");
-  
-      ws.onopen = () => {
-        console.log("WebSocket connection established");
-        // Delay to ensure client listeners are set before requesting connectionId.
-        setTimeout(() => {
-          ws.send(JSON.stringify({ action: "getConnectionId" }));
-        }, 1000); // Increase delay if needed
-      };
-  
-      ws.onmessage = (event) => {
-        console.log("WebSocket message received:", event.data);
-        try {
-          const data = JSON.parse(event.data);
-          if (data.connectionId) {
-            console.log("Received connectionId:", data.connectionId);
-            setConnectionId(data.connectionId);
-            return;
+    // Handle incoming WebSocket messages.
+    const handleMessage = (data: WebSocketMessage) => {
+      if (data.connectionId) {
+        console.log("Received connectionId:", data.connectionId);
+        setConnectionId(data.connectionId);
+        return;
+      }
+      if (data.text) {
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.sender === 'bot') {
+            const updatedMessage: Message = { 
+              ...lastMessage, 
+              text: lastMessage.text + (data.text || "") 
+            };
+            return [...prev.slice(0, -1), updatedMessage];
           }
-          if (data.text) {
-            setMessages(prev => {
-              const lastMessage = prev[prev.length - 1];
-              if (lastMessage && lastMessage.sender === 'bot') {
-                return [...prev.slice(0, -1), { ...lastMessage, text: lastMessage.text + data.text }];
-              }
-              return [...prev, { id: Date.now(), text: data.text, sender: 'bot' }];
-            });
-          }
-        } catch (err) {
-          console.error("Error parsing WebSocket message:", err);
-        }
-      };
+          return [...prev, { id: Date.now(), text: data.text || "", sender: 'bot' }];
+        });
+      }
+    };
   
-      ws.onclose = (event) => console.log("WebSocket connection closed", event);
-      ws.onerror = (err) => console.error("WebSocket error:", err);
+    // Establish WebSocket connection using the custom hook.
+    useWebSocket({
+      url: "wss://8vmg6i5bve.execute-api.us-west-2.amazonaws.com/Prod/",
+      onMessage: handleMessage,
+    });
   
-      return () => {
-        ws.close();
-      };
-    }, []);
-  
-    // Send a chat message to the backend (which streams a single response from OpenAI)
+    // Send a chat message to the backend.
     const sendChatMessage = async (message: string): Promise<string> => {
       if (!message.trim()) return "No message provided";
       if (!connectionId) return "Error: WebSocket connection is not established";
@@ -352,11 +337,11 @@ export default Chat;
     // Trigger sending a message.
     const sendMessage = async () => {
       if (input.trim() === '') return;
-      // Add the user's message to the UI.
+      // Add user's message to UI.
       const userMessage: Message = { id: Date.now(), text: input, sender: 'user' };
       setMessages(prev => [...prev, userMessage]);
   
-      // Add a placeholder for the bot's streaming response.
+      // Add placeholder for bot's streaming response.
       const botMessageId = Date.now() + 1;
       setMessages(prev => [...prev, { id: botMessageId, text: "", sender: 'bot' }]);
   
