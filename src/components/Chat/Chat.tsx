@@ -275,7 +275,12 @@ const Chat: React.FC = () => {
   // Establish a WebSocket connection to receive streaming chunks
   useEffect(() => {
     const ws = new WebSocket("wss://8vmg6i5bve.execute-api.us-west-2.amazonaws.com/Prod/");
-    ws.onopen = () => console.log("WebSocket connection established");
+    ws.onopen = () => {
+      console.log("WebSocket connection established");
+      setTimeout(() => {
+        ws.send(JSON.stringify({ action: "getConnectionId" }));
+      }, 500);  // Delay sending request to ensure connection is stable
+    };
     ws.onmessage = (event) => {
       console.log("WebSocket message received:", event.data);
       try {
