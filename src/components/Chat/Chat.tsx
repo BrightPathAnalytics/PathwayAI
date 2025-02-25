@@ -277,6 +277,7 @@ const Chat: React.FC = () => {
     const ws = new WebSocket("wss://8vmg6i5bve.execute-api.us-west-2.amazonaws.com/Prod/");
     ws.onopen = () => console.log("WebSocket connection established");
     ws.onmessage = (event) => {
+      console.log("WebSocket message received:", event.data);
       try {
         const data = JSON.parse(event.data);
         // If the message contains a connectionId, store it.
