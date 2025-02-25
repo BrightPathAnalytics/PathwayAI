@@ -16,6 +16,9 @@ Amplify.configure({
     ...amplifyConfig.API,
     REST: outputs.custom.API,
   },
+  custom: {
+    WebSocket: outputs.custom.WebSocket,
+  },
 });
 
 // Define custom form fields for sign-up
