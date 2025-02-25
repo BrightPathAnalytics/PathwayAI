@@ -285,7 +285,7 @@ export default Chat;
         setTimeout(() => {
           // Request the connectionId from the backend.
           ws.send(JSON.stringify({ action: "getConnectionId" }));
-        }, 500);
+        }, 1500);
       };
   
       ws.onmessage = (event) => {
