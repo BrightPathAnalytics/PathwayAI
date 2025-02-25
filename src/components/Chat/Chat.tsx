@@ -274,15 +274,16 @@ const Chat: React.FC = () => {
 
   // Establish a WebSocket connection to receive streaming chunks
   useEffect(() => {
-    // Replace with your actual WebSocket endpoint URL from API Gateway
     const ws = new WebSocket("wss://8vmg6i5bve.execute-api.us-west-2.amazonaws.com/Prod/");
     ws.onopen = () => console.log("WebSocket connection established");
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        // If the server sends the connectionId in a dedicated message, capture it:
+        // If the message contains a connectionId, store it.
         if (data.connectionId) {
-        setConnectionId(data.connectionId);
+          console.log("Received connectionId:", data.connectionId);
+          setConnectionId(data.connectionId);
+          return;
         }
         // Otherwise, process streaming chunks as before...
         if (data.text) {
