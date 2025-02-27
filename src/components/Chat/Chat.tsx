@@ -41,47 +41,62 @@ const Chat: React.FC = () => {
 
   useEffect(() => {
     ws.current = new WebSocket(WEBSOCKET_URL);
-
+    let messageQueue: string[] = []; // ✅ Store incoming chunks in order
+    let currentMessage = ""; // ✅ Track complete message
+    let updateTimeout: NodeJS.Timeout | null = null;
+  
     ws.current.onopen = () => {
       console.log("Connected to WebSocket Server");
     };
-
+  
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("Received WebSocket message:", data);
-
+  
       if (data.message) {
-        setMessages((prevMessages) => {
-          // Append the incoming chunk to the bot message if it exists; otherwise, create a new bot message.
-          if (botMessageIdRef.current !== null) {
-            return prevMessages.map((msg) =>
-              msg.id === botMessageIdRef.current
-                ? { ...msg, text: msg.text + data.message }
-                : msg
-            );
-          } else {
-            const newBotMessage: Message = {
-              id: prevMessages.length + 1,
-              text: data.message,
-              sender: "bot",
-            };
-            botMessageIdRef.current = newBotMessage.id;
-            return [...prevMessages, newBotMessage];
-          }
-        });
+        messageQueue.push(data.message); // ✅ Queue chunks in order
+  
+        // ✅ Process the queue at controlled intervals (every 100ms)
+        if (!updateTimeout) {
+          updateTimeout = setTimeout(() => {
+            setMessages((prevMessages) => {
+              currentMessage += messageQueue.join(" "); // ✅ Append queued chunks
+              messageQueue = []; // ✅ Clear queue after processing
+  
+              if (botMessageIdRef.current !== null) {
+                return prevMessages.map((msg) =>
+                  msg.id === botMessageIdRef.current
+                    ? { ...msg, text: currentMessage.trim() }
+                    : msg
+                );
+              } else {
+                const newBotMessage: Message = {
+                  id: prevMessages.length + 1,
+                  text: currentMessage.trim(),
+                  sender: "bot",
+                };
+                botMessageIdRef.current = newBotMessage.id;
+                return [...prevMessages, newBotMessage];
+              }
+            });
+  
+            updateTimeout = null;
+          }, 100);
+        }
       }
     };
-
+  
     ws.current.onclose = () => {
       console.log("WebSocket Connection Closed");
       botMessageIdRef.current = null;
     };
-
+  
     return () => {
+      if (updateTimeout) clearTimeout(updateTimeout);
       ws.current?.close();
     };
   }, []);
-
+  
   // ✅ Send message via WebSocket
   const sendMessage = () => {
     if (!input.trim()) return;
