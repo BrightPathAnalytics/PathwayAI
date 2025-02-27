@@ -35,6 +35,8 @@ const Chat: React.FC = () => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const botMessageIdRef = useRef<number | null>(null);
   const currentMessage = useRef(""); // ✅ Persistent full message
+  const messageQueue = useRef<string[]>([]);
+  let updateTimeout: NodeJS.Timeout | null = null;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,27 +50,35 @@ const Chat: React.FC = () => {
       console.log("Received WebSocket message:", data);
 
       if (data.message) {
-        currentMessage.current += data.message; // ✅ Append message chunk
+        messageQueue.current.push(data.message); // ✅ Queue incoming message chunks
 
-        setMessages((prevMessages) => {
-          if (botMessageIdRef.current !== null) {
-            // ✅ Update existing bot message
-            return prevMessages.map((msg) =>
-              msg.id === botMessageIdRef.current
-                ? { ...msg, text: currentMessage.current.trim() }
-                : msg
-            );
-          } else {
-            // ✅ Create a new bot message
-            const newBotMessage: Message = {
-              id: prevMessages.length + 1,
-              text: currentMessage.current.trim(),
-              sender: "bot",
-            };
-            botMessageIdRef.current = newBotMessage.id;
-            return [...prevMessages, newBotMessage];
-          }
-        });
+        // ✅ Process queue at controlled intervals to ensure order
+        if (!updateTimeout) {
+          updateTimeout = setTimeout(() => {
+            currentMessage.current += messageQueue.current.join(" "); // ✅ Append queued chunks in order
+            messageQueue.current = []; // ✅ Clear processed queue
+
+            setMessages((prevMessages) => {
+              if (botMessageIdRef.current !== null) {
+                return prevMessages.map((msg) =>
+                  msg.id === botMessageIdRef.current
+                    ? { ...msg, text: currentMessage.current.trim() }
+                    : msg
+                );
+              } else {
+                const newBotMessage: Message = {
+                  id: prevMessages.length + 1,
+                  text: currentMessage.current.trim(),
+                  sender: "bot",
+                };
+                botMessageIdRef.current = newBotMessage.id;
+                return [...prevMessages, newBotMessage];
+              }
+            });
+
+            updateTimeout = null;
+          }, 200); // ✅ Slight delay ensures full words are processed
+        }
       }
     },
   });
