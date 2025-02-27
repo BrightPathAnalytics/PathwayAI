@@ -237,7 +237,7 @@ export default Chat;
   in the payload) so that your backend process knows where to stream responses.
  */
 
-  import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Chat.css';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import Sidebar from '../Sidebar/Sidebar';
@@ -265,6 +265,7 @@ const Chat: React.FC = () => {
   const [feedback, setFeedback] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null);
+  const botMessageIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -283,12 +284,28 @@ const Chat: React.FC = () => {
       console.log("Received WebSocket message:", data);
 
       if (data.message) {
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { id: prevMessages.length + 1, text: data.message, sender: 'bot' }
-        ]);
+        setMessages((prevMessages: Message[]) => {
+          if (botMessageIdRef.current !== null) {
+            // ✅ Append to the existing bot message
+            return prevMessages.map((msg) =>
+              msg.id === botMessageIdRef.current
+                ? { ...msg, text: msg.text + data.message, sender: "bot" as const } // Ensure correct type
+                : msg
+            );
+          } else {
+            // ✅ Create a new bot message (first chunk)
+            const newBotMessage: Message = { 
+              id: prevMessages.length + 1, 
+              text: data.message, 
+              sender: "bot"  // Ensure "bot" is assigned correctly
+            };
+            botMessageIdRef.current = newBotMessage.id;
+            return [...prevMessages, newBotMessage];
+          }
+        });
       }
     };
+
 
     ws.current.onerror = (error) => {
       console.error("WebSocket Error:", error);
@@ -316,6 +333,7 @@ const Chat: React.FC = () => {
     setMessages([...messages, userMessage]);
     setInput('');
     setLoading(true);
+    botMessageIdRef.current = null; // Reset tracking for new bot message
 
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({ action: "sendMessage", message: input }));
