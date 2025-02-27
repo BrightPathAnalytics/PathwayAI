@@ -37,8 +37,8 @@ const Chat: React.FC = () => {
 
   useEffect(() => {
     ws.current = new WebSocket(WEBSOCKET_URL);
-    let botMessageBuffer = ""; // ✅ Buffer for collecting response chunks
-    let updateTimeout: NodeJS.Timeout | null = null; // ✅ Timer to control UI updates
+    let messageStack: string[] = []; // ✅ Stack to store incoming message chunks
+    let updateTimeout: NodeJS.Timeout | null = null;
   
     ws.current.onopen = () => {
       console.log("Connected to WebSocket Server");
@@ -49,31 +49,33 @@ const Chat: React.FC = () => {
       console.log("Received WebSocket message:", data);
   
       if (data.message) {
-        botMessageBuffer += data.message + " "; // ✅ Append chunk with space for proper order
+        messageStack.push(data.message); // ✅ Push new chunk onto the stack
   
-        // ✅ Delay UI update slightly to ensure correct order (every 200ms)
+        // ✅ Process message stack at controlled intervals (every 200ms)
         if (!updateTimeout) {
           updateTimeout = setTimeout(() => {
             setMessages((prevMessages) => {
+              const fullMessage = messageStack.join(""); // ✅ Pop and combine chunks
+              messageStack = []; // ✅ Clear stack after processing
+  
               if (botMessageIdRef.current !== null) {
                 return prevMessages.map((msg) =>
                   msg.id === botMessageIdRef.current
-                    ? { ...msg, text: botMessageBuffer.trim() } // ✅ Append buffer instead of per chunk
+                    ? { ...msg, text: fullMessage.trim() }
                     : msg
                 );
               } else {
-                // ✅ First chunk, create a new bot message
                 const newBotMessage: Message = {
                   id: prevMessages.length + 1,
-                  text: botMessageBuffer.trim(),
+                  text: fullMessage.trim(),
                   sender: "bot",
                 };
                 botMessageIdRef.current = newBotMessage.id;
                 return [...prevMessages, newBotMessage];
               }
             });
-            updateTimeout = null; // ✅ Reset timeout
-          }, 200); // ✅ UI updates every 200ms for smoother display
+            updateTimeout = null;
+          }, 30);
         }
       }
     };
