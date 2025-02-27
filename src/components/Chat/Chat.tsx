@@ -236,136 +236,118 @@ export default Chat;
 • When a chat message is sent, the client triggers a REST API (or includes its connection ID
   in the payload) so that your backend process knows where to stream responses.
  */
+
   import React, { useState, useEffect, useRef } from 'react';
-  import './Chat.css';
-  import { useAuthenticator } from '@aws-amplify/ui-react';
-  import Sidebar from '../Sidebar/Sidebar';
-  import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-  import { faBars, faPlus, faCog, faCommentDots } from '@fortawesome/free-solid-svg-icons';
-  import { fetchAuthSession } from '@aws-amplify/auth';
-  import ReactMarkdown from "react-markdown";
-  import remarkGfm from "remark-gfm";
-  
-  // Import our custom WebSocket hook and its type.
-  import useWebSocket, { WebSocketMessage } from '../../hooks/useWebSocket';
-  
-  interface Message {
-    id: number;
-    text: string;
-    sender: 'user' | 'bot';
-  }
-  
-  const Chat: React.FC = () => {
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [input, setInput] = useState('');
-    const { user, signOut } = useAuthenticator();
-    const [loading, setLoading] = useState<boolean>(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [feedback, setFeedback] = useState('');
-    const chatEndRef = useRef<HTMLDivElement>(null);
-    const [connectionId, setConnectionId] = useState<string | null>(null);
-  
-    // Scroll to bottom when messages update.
-    useEffect(() => {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
-  
-    // Handle incoming WebSocket messages.
-    const handleMessage = (data: WebSocketMessage) => {
-      if (data.connectionId) {
-        console.log("Received connectionId:", data.connectionId);
-        setConnectionId(data.connectionId);
-        return;
-      }
-      if (data.text) {
-        setMessages(prev => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage && lastMessage.sender === 'bot') {
-            const updatedMessage: Message = { 
-              ...lastMessage, 
-              text: lastMessage.text + (data.text || "") 
-            };
-            return [...prev.slice(0, -1), updatedMessage];
-          }
-          return [...prev, { id: Date.now(), text: data.text || "", sender: 'bot' }];
-        });
+import './Chat.css';
+import { useAuthenticator } from '@aws-amplify/ui-react';
+import Sidebar from '../Sidebar/Sidebar';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBars, faPlus, faCog, faCommentDots } from '@fortawesome/free-solid-svg-icons';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+interface Message {
+  id: number;
+  text: string;
+  sender: 'user' | 'bot';
+}
+
+const WEBSOCKET_URL = "wss://sug5qgww0b.execute-api.us-west-2.amazonaws.com/Prod/";
+
+const Chat: React.FC = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const { user, signOut } = useAuthenticator();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const ws = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // ✅ Establish WebSocket connection
+  useEffect(() => {
+    ws.current = new WebSocket(WEBSOCKET_URL);
+
+    ws.current.onopen = () => {
+      console.log("Connected to WebSocket Server");
+    };
+
+    ws.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Received WebSocket message:", data);
+
+      if (data.message) {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { id: prevMessages.length + 1, text: data.message, sender: 'bot' }
+        ]);
       }
     };
-  
-    // Establish WebSocket connection using the custom hook.
-    useWebSocket({
-      url: "wss://8vmg6i5bve.execute-api.us-west-2.amazonaws.com/Prod/",
-      onMessage: handleMessage,
-    });
-  
-    // Send a chat message to the backend.
-    const sendChatMessage = async (message: string): Promise<string> => {
-      if (!message.trim()) return "No message provided";
-      if (!connectionId) return "Error: WebSocket connection is not established";
-  
-      setLoading(true);
-      try {
-        const { tokens } = await fetchAuthSession();
-        const idToken = tokens?.idToken?.toString();
-        if (!idToken) throw new Error("User is not authenticated.");
-  
-        const response = await fetch("https://mlc2bq2561.execute-api.us-west-2.amazonaws.com/Prod/chat", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: user?.username,
-            message,
-            connectionId,
-          }),
-        });
-  
-        const jsonData = await response.json();
-        return jsonData.response ?? "No response received";
-      } catch (error) {
-        console.error("Error sending chat message:", error);
-        return "Error: Unable to get a response";
-      } finally {
-        setLoading(false);
-      }
+
+    ws.current.onerror = (error) => {
+      console.error("WebSocket Error:", error);
     };
-  
-    // Trigger sending a message.
-    const sendMessage = async () => {
-      if (input.trim() === '') return;
-      // Add user's message to UI.
-      const userMessage: Message = { id: Date.now(), text: input, sender: 'user' };
-      setMessages(prev => [...prev, userMessage]);
-  
-      // Add placeholder for bot's streaming response.
-      const botMessageId = Date.now() + 1;
-      setMessages(prev => [...prev, { id: botMessageId, text: "", sender: 'bot' }]);
-  
-      const currentInput = input;
-      setInput('');
-      sendChatMessage(currentInput)
-        .then((res) => {
-          console.log("Streaming initiated:", res);
-        })
-        .catch(err => console.error("Error in sendChatMessage:", err));
+
+    ws.current.onclose = () => {
+      console.log("WebSocket Connection Closed");
     };
-  
-    // UI toggles and handlers.
-    const handleSidebarToggle = () => setIsSidebarOpen(!isSidebarOpen);
-    const handleFeedbackToggle = () => setIsFeedbackOpen(!isFeedbackOpen);
-    const handleSettingsToggle = () => setIsSettingsOpen(!isSettingsOpen);
-    const handleFeedbackSubmit = () => {
-      console.log('Feedback submitted:', feedback);
-      setIsFeedbackOpen(false);
-      setFeedback('');
+
+    return () => {
+      ws.current?.close();
     };
-    const createNewChat = () => {
-      console.log('New chat created');
+  }, []);
+
+  // ✅ Send message via WebSocket
+  const sendMessage = () => {
+    if (!input.trim()) return;
+
+    const userMessage: Message = {
+      id: messages.length + 1,
+      text: input,
+      sender: 'user',
     };
+
+    setMessages([...messages, userMessage]);
+    setInput('');
+    setLoading(true);
+
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ action: "sendMessage", message: input }));
+    } else {
+      console.error("WebSocket is not open.");
+    }
+  };
+
+  const handleSidebarToggle = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleFeedbackToggle = () => {
+    setIsFeedbackOpen(!isFeedbackOpen);
+  };
+
+  const handleSettingsToggle = () => {
+    setIsSettingsOpen(!isSettingsOpen);
+  };
+
+  const handleFeedbackSubmit = () => {
+    console.log('Feedback submitted:', feedback);
+    setIsFeedbackOpen(false);
+    setFeedback('');
+    // Logic to submit feedback 
+  };
+
+  const createNewChat = () => {
+    console.log('New chat created');
+    setMessages([]);
+    // Logic to create new chat
+  };
   
     return (
       <div className={`chat-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
@@ -394,9 +376,9 @@ export default Chat;
           </div>
         </div>
         <div className="messages">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`message ${msg.sender}`}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+          {messages.map((message) => (
+            <div key={message.id} className={`message ${message.sender}`}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
             </div>
           ))}
           <div ref={chatEndRef} />
@@ -408,7 +390,7 @@ export default Chat;
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
           />
-          <button onClick={sendMessage} disabled={loading || !connectionId}>
+          <button onClick={sendMessage} disabled={loading}>
             {loading ? 'Sending...' : 'Send'}
           </button>
         </div>
@@ -435,4 +417,3 @@ export default Chat;
   };
   
   export default Chat;
-  
