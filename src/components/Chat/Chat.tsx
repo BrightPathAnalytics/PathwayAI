@@ -41,8 +41,6 @@ const Chat: React.FC = () => {
 
   useEffect(() => {
     ws.current = new WebSocket(WEBSOCKET_URL);
-    let botMessageBuffer = ""; // ✅ Buffer for collecting response chunks
-    let updateTimeout: NodeJS.Timeout | null = null; // ✅ Timer to control UI updates
   
     ws.current.onopen = () => {
       console.log("Connected to WebSocket Server");
@@ -50,37 +48,31 @@ const Chat: React.FC = () => {
   
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log("Received WebSocket message:", data);
-  
+      console.log("Received WebSocket message:", data); // ✅ Debug log
+    
       if (data.message) {
-        botMessageBuffer += data.message; // ✅ Append chunk to buffer
-  
-        // ✅ Delay UI update slightly to prevent flickering (update every 200ms)
-        if (!updateTimeout) {
-          updateTimeout = setTimeout(() => {
-            setMessages((prevMessages) => {
-              if (botMessageIdRef.current !== null) {
-                return prevMessages.map((msg) =>
-                  msg.id === botMessageIdRef.current
-                    ? { ...msg, text: botMessageBuffer } // ✅ Append buffer instead of single chunks
-                    : msg
-                );
-              } else {
-                // ✅ First chunk, create a new bot message
-                const newBotMessage: Message = {
-                  id: prevMessages.length + 1,
-                  text: botMessageBuffer,
-                  sender: "bot",
-                };
-                botMessageIdRef.current = newBotMessage.id;
-                return [...prevMessages, newBotMessage];
-              }
-            });
-            updateTimeout = null; // ✅ Reset timeout
-          }, 200); // ✅ UI updates every 200ms for smoother display
-        }
+        setMessages((prevMessages) => {
+          if (botMessageIdRef.current !== null) {
+            // ✅ Append to the existing bot message while maintaining order
+            return prevMessages.map((msg) =>
+              msg.id === botMessageIdRef.current
+                ? { ...msg, text: msg.text + data.message } // Append chunk in correct order
+                : msg
+            );
+          } else {
+            // ✅ First chunk, create a new bot message
+            const newBotMessage: Message = { 
+              id: prevMessages.length + 1, 
+              text: data.message, 
+              sender: "bot" 
+            };
+            botMessageIdRef.current = newBotMessage.id;
+            return [...prevMessages, newBotMessage];
+          }
+        });
       }
     };
+    
   
     ws.current.onclose = () => {
       console.log("WebSocket Connection Closed");
@@ -88,7 +80,6 @@ const Chat: React.FC = () => {
     };
   
     return () => {
-      if (updateTimeout) clearTimeout(updateTimeout);
       ws.current?.close();
     };
   }, []);
