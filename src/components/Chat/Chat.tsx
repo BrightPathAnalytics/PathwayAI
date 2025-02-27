@@ -26,7 +26,7 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const { user, signOut } = useAuthenticator();
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -34,6 +34,8 @@ const Chat: React.FC = () => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const ws = useRef<WebSocket | null>(null);
   const botMessageIdRef = useRef<number | null>(null);
+  const messageQueue = useRef<string[]>([]); // ✅ Store chunks in order
+  const currentMessage = useRef(""); // ✅ Persistent full message
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -41,79 +43,70 @@ const Chat: React.FC = () => {
 
   useEffect(() => {
     ws.current = new WebSocket(WEBSOCKET_URL);
-    let messageQueue: string[] = []; // ✅ Store incoming chunks in order
-    let currentMessage = ""; // ✅ Track complete message
-    let updateTimeout: NodeJS.Timeout | null = null;
-  
+
     ws.current.onopen = () => {
       console.log("Connected to WebSocket Server");
     };
-  
+
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("Received WebSocket message:", data);
-  
+
       if (data.message) {
-        messageQueue.push(data.message); // ✅ Queue chunks in order
-  
-        // ✅ Process the queue at controlled intervals (every 100ms)
-        if (!updateTimeout) {
-          updateTimeout = setTimeout(() => {
-            setMessages((prevMessages) => {
-              currentMessage += messageQueue.join(" "); // ✅ Append queued chunks
-              messageQueue = []; // ✅ Clear queue after processing
-  
-              if (botMessageIdRef.current !== null) {
-                return prevMessages.map((msg) =>
-                  msg.id === botMessageIdRef.current
-                    ? { ...msg, text: currentMessage.trim() }
-                    : msg
-                );
-              } else {
-                const newBotMessage: Message = {
-                  id: prevMessages.length + 1,
-                  text: currentMessage.trim(),
-                  sender: "bot",
-                };
-                botMessageIdRef.current = newBotMessage.id;
-                return [...prevMessages, newBotMessage];
-              }
-            });
-  
-            updateTimeout = null;
-          }, 100);
-        }
+        messageQueue.current.push(data.message); // ✅ Queue chunks in correct order
+
+        setTimeout(() => {
+          // ✅ Append queued chunks to the full message
+          currentMessage.current += messageQueue.current.join(" ");
+          messageQueue.current = []; // ✅ Clear queue after processing
+
+          setMessages((prevMessages) => {
+            if (botMessageIdRef.current !== null) {
+              return prevMessages.map((msg) =>
+                msg.id === botMessageIdRef.current
+                  ? { ...msg, text: currentMessage.current.trim() }
+                  : msg
+              );
+            } else {
+              const newBotMessage: Message = {
+                id: prevMessages.length + 1,
+                text: currentMessage.current.trim(),
+                sender: "bot",
+              };
+              botMessageIdRef.current = newBotMessage.id;
+              return [...prevMessages, newBotMessage];
+            }
+          });
+        }, 100);
       }
     };
-  
+
     ws.current.onclose = () => {
       console.log("WebSocket Connection Closed");
       botMessageIdRef.current = null;
     };
-  
+
     return () => {
-      if (updateTimeout) clearTimeout(updateTimeout);
       ws.current?.close();
     };
   }, []);
-  
-  // ✅ Send message via WebSocket
+
   const sendMessage = () => {
     if (!input.trim()) return;
 
     const userMessage: Message = {
       id: messages.length + 1,
       text: input,
-      sender: 'user',
+      sender: "user",
     };
 
     setMessages([...messages, userMessage]);
-    setInput('');
-    setLoading(true);
-    botMessageIdRef.current = null; // Reset tracking for new bot message
+    setInput("");
 
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({ action: "sendMessage", message: input }));
+      botMessageIdRef.current = null; // ✅ Reset bot message tracking
+      currentMessage.current = ""; // ✅ Reset bot message buffer
     } else {
       console.error("WebSocket is not open.");
     }
