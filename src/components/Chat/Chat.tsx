@@ -13,6 +13,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faPlus, faCog, faCommentDots } from '@fortawesome/free-solid-svg-icons';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import useWebSocket from 'react-use-websocket';
 
 interface Message {
   id: number;
@@ -26,73 +27,55 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const { user, signOut } = useAuthenticator();
-  const [loading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const ws = useRef<WebSocket | null>(null);
   const botMessageIdRef = useRef<number | null>(null);
-  const messageQueue = useRef<string[]>([]); // ✅ Store chunks in order
   const currentMessage = useRef(""); // ✅ Persistent full message
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  useEffect(() => {
-    ws.current = new WebSocket(WEBSOCKET_URL);
-
-    ws.current.onopen = () => {
-      console.log("Connected to WebSocket Server");
-    };
-
-    ws.current.onmessage = (event) => {
+  // ✅ WebSocket connection using `react-use-websocket`
+  const { sendMessage } = useWebSocket(WEBSOCKET_URL, {
+    shouldReconnect: () => true, // ✅ Auto-reconnect on disconnect
+    onMessage: (event) => {
       const data = JSON.parse(event.data);
       console.log("Received WebSocket message:", data);
 
       if (data.message) {
-        messageQueue.current.push(data.message); // ✅ Queue chunks in correct order
+        currentMessage.current += data.message; // ✅ Append message chunk
 
-        setTimeout(() => {
-          // ✅ Append queued chunks to the full message
-          currentMessage.current += messageQueue.current.join(" ");
-          messageQueue.current = []; // ✅ Clear queue after processing
-
-          setMessages((prevMessages) => {
-            if (botMessageIdRef.current !== null) {
-              return prevMessages.map((msg) =>
-                msg.id === botMessageIdRef.current
-                  ? { ...msg, text: currentMessage.current.trim() }
-                  : msg
-              );
-            } else {
-              const newBotMessage: Message = {
-                id: prevMessages.length + 1,
-                text: currentMessage.current.trim(),
-                sender: "bot",
-              };
-              botMessageIdRef.current = newBotMessage.id;
-              return [...prevMessages, newBotMessage];
-            }
-          });
-        }, 100);
+        setMessages((prevMessages) => {
+          if (botMessageIdRef.current !== null) {
+            // ✅ Update existing bot message
+            return prevMessages.map((msg) =>
+              msg.id === botMessageIdRef.current
+                ? { ...msg, text: currentMessage.current.trim() }
+                : msg
+            );
+          } else {
+            // ✅ Create a new bot message
+            const newBotMessage: Message = {
+              id: prevMessages.length + 1,
+              text: currentMessage.current.trim(),
+              sender: "bot",
+            };
+            botMessageIdRef.current = newBotMessage.id;
+            return [...prevMessages, newBotMessage];
+          }
+        });
       }
-    };
+    },
+  });
 
-    ws.current.onclose = () => {
-      console.log("WebSocket Connection Closed");
-      botMessageIdRef.current = null;
-    };
-
-    return () => {
-      ws.current?.close();
-    };
-  }, []);
-
-  const sendMessage = () => {
+  const sendChatMessage = () => {
     if (!input.trim()) return;
+    setLoading(true);
 
     const userMessage: Message = {
       id: messages.length + 1,
@@ -103,13 +86,10 @@ const Chat: React.FC = () => {
     setMessages([...messages, userMessage]);
     setInput("");
 
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({ action: "sendMessage", message: input }));
-      botMessageIdRef.current = null; // ✅ Reset bot message tracking
-      currentMessage.current = ""; // ✅ Reset bot message buffer
-    } else {
-      console.error("WebSocket is not open.");
-    }
+    sendMessage(JSON.stringify({ action: "sendMessage", message: input }));
+    
+    botMessageIdRef.current = null; // ✅ Reset bot message tracking
+    currentMessage.current = ""; // ✅ Reset bot message buffer
   };
 
   const handleSidebarToggle = () => {
@@ -176,9 +156,9 @@ const Chat: React.FC = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
           />
-          <button onClick={sendMessage} disabled={loading}>
+          <button onClick={sendChatMessage} disabled={loading}>
             {loading ? 'Sending...' : 'Send'}
           </button>
         </div>
