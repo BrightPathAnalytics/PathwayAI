@@ -36,8 +36,12 @@ const Chat: React.FC = () => {
   const botMessageIdRef = useRef<number | null>(null);
 
   useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
     ws.current = new WebSocket(WEBSOCKET_URL);
-    let messageStack: string[] = []; // ✅ Stack to store incoming message chunks
+    const messageStack: string[] = []; // ✅ Stack for ordered message chunks
     let updateTimeout: NodeJS.Timeout | null = null;
   
     ws.current.onopen = () => {
@@ -49,22 +53,23 @@ const Chat: React.FC = () => {
       console.log("Received WebSocket message:", data);
   
       if (data.message) {
-        messageStack.push(data.message); // ✅ Push new chunk onto the stack
+        messageStack.push(data.message); // ✅ Append chunk to stack
   
-        // ✅ Process message stack at controlled intervals (every 200ms)
+        // ✅ Process stack and update UI every 200ms
         if (!updateTimeout) {
           updateTimeout = setTimeout(() => {
             setMessages((prevMessages) => {
-              const fullMessage = messageStack.join(""); // ✅ Pop and combine chunks
-              messageStack = []; // ✅ Clear stack after processing
+              const fullMessage = messageStack.join(" "); // ✅ Join all received chunks
   
               if (botMessageIdRef.current !== null) {
+                // ✅ Append to the existing bot message
                 return prevMessages.map((msg) =>
                   msg.id === botMessageIdRef.current
-                    ? { ...msg, text: fullMessage.trim() }
+                    ? { ...msg, text: fullMessage.trim() } // ✅ Keeps appending until the full message is received
                     : msg
                 );
               } else {
+                // ✅ First message, create new bot response
                 const newBotMessage: Message = {
                   id: prevMessages.length + 1,
                   text: fullMessage.trim(),
@@ -74,8 +79,8 @@ const Chat: React.FC = () => {
                 return [...prevMessages, newBotMessage];
               }
             });
-            updateTimeout = null;
-          }, 30);
+            updateTimeout = null; // ✅ Reset timeout
+          }, 200);
         }
       }
     };
@@ -90,6 +95,7 @@ const Chat: React.FC = () => {
       ws.current?.close();
     };
   }, []);
+  
   
   
 
