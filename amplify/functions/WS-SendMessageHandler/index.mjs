@@ -22,37 +22,48 @@ export const handler = async (event) => {
     const apiClient = new ApiGatewayManagementApiClient({ endpoint, region });
 
     try {
-        // Create a new OpenAI Thread (conversation)
+        console.log("Creating a new OpenAI thread...");
         const thread = await openai.beta.threads.create();
 
-        // Add the user message to the thread
+        console.log(`Adding user message: "${userMessage}" to thread ${thread.id}`);
         await openai.beta.threads.messages.create(thread.id, {
             role: "user",
             content: userMessage
         });
 
-        // Run the assistant on the thread
-        const run = await openai.beta.threads.runs.create(thread.id, {
-            assistant_id: ASSISTANT_ID,
-            stream: true // Enable streaming
+        console.log(`Starting assistant ${ASSISTANT_ID} with event-based streaming...`);
+
+        // ✅ Make sure Lambda waits until the stream is fully processed
+        await new Promise((resolve, reject) => {
+            const run = openai.beta.threads.runs.stream(thread.id, {
+                assistant_id: ASSISTANT_ID
+            });
+
+            run
+                .on('textCreated', (text) => {
+                    console.log(`Assistant started response: "${text}"`);
+                })
+                .on('textDelta', async (textDelta) => {
+                    console.log(`Streaming chunk: "${textDelta.value}"`);
+                    
+                    await apiClient.send(new PostToConnectionCommand({
+                        ConnectionId: connectionId,
+                        Data: JSON.stringify({ message: textDelta.value })
+                    }));
+                })
+                .on('end', () => {
+                    console.log("Streaming complete.");
+                    resolve(); // ✅ Ensures Lambda only exits after streaming is done
+                })
+                .on('error', (err) => {
+                    console.error("Error during streaming:", err);
+                    reject(err);
+                });
         });
-
-        // Stream responses back to the WebSocket client
-        for await (const chunk of run) {
-            if (chunk.choices && chunk.choices[0].delta.content) {
-                const messageChunk = chunk.choices[0].delta.content;
-
-                await apiClient.send(new PostToConnectionCommand({
-                    ConnectionId: connectionId,
-                    Data: JSON.stringify({ message: messageChunk })
-                }));
-            }
-        }
 
         return { statusCode: 200 };
     } catch (error) {
         console.error("Error sending OpenAI Assistant response:", error);
         return { statusCode: 500, body: JSON.stringify({ message: "Failed to generate AI response" }) };
     }
-
 };
