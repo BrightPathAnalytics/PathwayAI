@@ -5,68 +5,61 @@
   in the payload) so that your backend process knows where to stream responses.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import './Chat.css';
-import { useAuthenticator } from '@aws-amplify/ui-react';
-import Sidebar from '../Sidebar/Sidebar';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faPlus, faCog, faCommentDots } from '@fortawesome/free-solid-svg-icons';
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import useWebSocket from 'react-use-websocket';
-
-interface Message {
-  id: number;
-  text: string;
-  sender: 'user' | 'bot';
-}
-
-const WEBSOCKET_URL = "wss://sug5qgww0b.execute-api.us-west-2.amazonaws.com/Prod/";
-
-const Chat: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const { user, signOut } = useAuthenticator();
-  const [loading, setLoading] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [feedback, setFeedback] = useState('');
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const botMessageIdRef = useRef<number | null>(null);
-  const currentMessage = useRef(""); // ✅ Persistent full message
-  const messageQueue = useRef<string[]>([]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // ✅ WebSocket connection using `react-use-websocket`
-  const { sendMessage } = useWebSocket(WEBSOCKET_URL, {
-    shouldReconnect: () => true, // ✅ Auto-reconnect on disconnect
-    onMessage: (event) => {
-      const data = JSON.parse(event.data);
-      console.log("Received WebSocket message:", data);
-
-      if (data.message) {
-        messageQueue.current.push(data.message); // ✅ Queue incoming message chunks
-
-        // ✅ Process queue at controlled intervals to ensure order
-        if (data.message.includes("\n") || messageQueue.current.length > 10) {
-          currentMessage.current += messageQueue.current.join(" "); // ✅ Append queued chunks
-          messageQueue.current = []; // ✅ Clear processed queue
-
+  import React, { useState, useEffect, useRef } from 'react';
+  import './Chat.css';
+  import { useAuthenticator } from '@aws-amplify/ui-react';
+  import Sidebar from '../Sidebar/Sidebar';
+  import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+  import { faBars, faPlus, faCog, faCommentDots } from '@fortawesome/free-solid-svg-icons';
+  import ReactMarkdown from "react-markdown";
+  import remarkGfm from "remark-gfm";
+  import useWebSocket from 'react-use-websocket';
+  
+  interface Message {
+    id: number;
+    text: string;
+    sender: 'user' | 'bot';
+  }
+  
+  const WEBSOCKET_URL = "wss://sug5qgww0b.execute-api.us-west-2.amazonaws.com/Prod/";
+  
+  const Chat: React.FC = () => {
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState('');
+    const { user, signOut } = useAuthenticator();
+    const [loading, setLoading] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [feedback, setFeedback] = useState('');
+    const chatEndRef = useRef<HTMLDivElement>(null);
+    const botMessageIdRef = useRef<number | null>(null); // Tracks current bot message ID
+  
+    useEffect(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+  
+    // ✅ WebSocket connection using `react-use-websocket`
+    const { sendMessage } = useWebSocket(WEBSOCKET_URL, {
+      shouldReconnect: () => true, // ✅ Auto-reconnect on disconnect
+      onMessage: (event) => {
+        const data = JSON.parse(event.data);
+        console.log("Received WebSocket message:", data);
+  
+        if (data.message) {
           setMessages((prevMessages) => {
             if (botMessageIdRef.current !== null) {
+              // ✅ Append new chunk to the existing bot message
               return prevMessages.map((msg) =>
                 msg.id === botMessageIdRef.current
-                  ? { ...msg, text: currentMessage.current.trim() }
+                  ? { ...msg, text: msg.text + " " + data.message } // ✅ Append without buffering
                   : msg
               );
             } else {
+              // ✅ Create a new bot message if one doesn't exist
               const newBotMessage: Message = {
                 id: prevMessages.length + 1,
-                text: currentMessage.current.trim(),
+                text: data.message,
                 sender: "bot",
               };
               botMessageIdRef.current = newBotMessage.id;
@@ -74,28 +67,26 @@ const Chat: React.FC = () => {
             }
           });
         }
-      }
-    },
-  });
-
-  const sendChatMessage = () => {
-    if (!input.trim()) return;
-    setLoading(true);
-
-    const userMessage: Message = {
-      id: messages.length + 1,
-      text: input,
-      sender: "user",
+      },
+    });
+  
+    const sendChatMessage = () => {
+      if (!input.trim()) return;
+      setLoading(true);
+  
+      const userMessage: Message = {
+        id: messages.length + 1,
+        text: input,
+        sender: "user",
+      };
+  
+      setMessages((prevMessages) => [...prevMessages, userMessage]); // ✅ Functional update to prevent issues
+      setInput("");
+  
+      sendMessage(JSON.stringify({ action: "sendMessage", message: input }));
+      
+      botMessageIdRef.current = null; // ✅ Reset bot message tracking for next response
     };
-
-    setMessages([...messages, userMessage]);
-    setInput("");
-
-    sendMessage(JSON.stringify({ action: "sendMessage", message: input }));
-    
-    botMessageIdRef.current = null; // ✅ Reset bot message tracking
-    currentMessage.current = ""; // ✅ Reset bot message buffer
-  };
 
   const handleSidebarToggle = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -120,7 +111,6 @@ const Chat: React.FC = () => {
     console.log('New chat created');
     setMessages([]);
     botMessageIdRef.current = null;
-    currentMessage.current = "";
     // Logic to create new chat
   };
   
