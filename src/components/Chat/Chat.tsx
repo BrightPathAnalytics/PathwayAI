@@ -36,7 +36,6 @@ const Chat: React.FC = () => {
   const botMessageIdRef = useRef<number | null>(null);
   const currentMessage = useRef(""); // ✅ Persistent full message
   const messageQueue = useRef<string[]>([]);
-  let updateTimeout: NodeJS.Timeout | null = null;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,31 +52,27 @@ const Chat: React.FC = () => {
         messageQueue.current.push(data.message); // ✅ Queue incoming message chunks
 
         // ✅ Process queue at controlled intervals to ensure order
-        if (!updateTimeout) {
-          updateTimeout = setTimeout(() => {
-            currentMessage.current += messageQueue.current.join(" "); // ✅ Append queued chunks in order
-            messageQueue.current = []; // ✅ Clear processed queue
+        if (data.message.includes("\n") || messageQueue.current.length > 10) {
+          currentMessage.current += messageQueue.current.join(" "); // ✅ Append queued chunks
+          messageQueue.current = []; // ✅ Clear processed queue
 
-            setMessages((prevMessages) => {
-              if (botMessageIdRef.current !== null) {
-                return prevMessages.map((msg) =>
-                  msg.id === botMessageIdRef.current
-                    ? { ...msg, text: currentMessage.current.trim() }
-                    : msg
-                );
-              } else {
-                const newBotMessage: Message = {
-                  id: prevMessages.length + 1,
-                  text: currentMessage.current.trim(),
-                  sender: "bot",
-                };
-                botMessageIdRef.current = newBotMessage.id;
-                return [...prevMessages, newBotMessage];
-              }
-            });
-
-            updateTimeout = null;
-          }, 200); // ✅ Slight delay ensures full words are processed
+          setMessages((prevMessages) => {
+            if (botMessageIdRef.current !== null) {
+              return prevMessages.map((msg) =>
+                msg.id === botMessageIdRef.current
+                  ? { ...msg, text: currentMessage.current.trim() }
+                  : msg
+              );
+            } else {
+              const newBotMessage: Message = {
+                id: prevMessages.length + 1,
+                text: currentMessage.current.trim(),
+                sender: "bot",
+              };
+              botMessageIdRef.current = newBotMessage.id;
+              return [...prevMessages, newBotMessage];
+            }
+          });
         }
       }
     },
@@ -124,6 +119,8 @@ const Chat: React.FC = () => {
   const createNewChat = () => {
     console.log('New chat created');
     setMessages([]);
+    botMessageIdRef.current = null;
+    currentMessage.current = "";
     // Logic to create new chat
   };
   
