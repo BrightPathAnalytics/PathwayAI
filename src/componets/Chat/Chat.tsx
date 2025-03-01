@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Chat.css';
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import Sidebar from './Sidebar'; // Import the Sidebar component
+import Sidebar from '../Sidebar/Sidebar'; // Import the Sidebar component
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCog, faCommentDots } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faPlus, faCog, faCommentDots } from '@fortawesome/free-solid-svg-icons';
 import { fetchAuthSession } from '@aws-amplify/auth';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -155,12 +155,29 @@ const Chat: React.FC = () => {
     /* Logic to submit feedback */
   };
 
+  const createNewChat = () => {
+    console.log('New chat created');
+    setMessages([]);
+    // Logic to create new chat
+  };
+
   return (
     <div className={`chat-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-      <Sidebar onToggle={handleSidebarToggle} isOpen={isSidebarOpen} />
+      <Sidebar onToggle={handleSidebarToggle} isOpen={isSidebarOpen} userLoginId={user?.signInDetails?.loginId} />
       <div className="chat-header">
-        <span className="user-info">{user?.signInDetails?.loginId}'s Conversation</span>
-        <div className="header-buttons">
+        <div className="left-buttons">
+          {!isSidebarOpen && (
+            <>
+              <button className="toggle-button" onClick={handleSidebarToggle}>
+                <FontAwesomeIcon icon={faBars} />
+              </button>
+              <button className="new-chat-button" onClick={createNewChat}>
+                <FontAwesomeIcon icon={faPlus} />
+              </button>
+            </>
+          )}
+        </div>
+        <div className="right-buttons">
           <button className="feedback-button" onClick={handleFeedbackToggle}>
             <FontAwesomeIcon icon={faCommentDots} />
           </button>
@@ -183,7 +200,7 @@ const Chat: React.FC = () => {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
         />
         <button onClick={sendMessage} disabled={loading}>
           {loading ? 'Sending...' : 'Send'}

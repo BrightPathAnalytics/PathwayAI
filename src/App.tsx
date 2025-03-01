@@ -1,4 +1,4 @@
-import Chatbot from './componets/Chat';
+import Chatbot from './componets/Chat/Chat';
 
 function App() {
   return (
