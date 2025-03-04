@@ -1,39 +1,44 @@
 import React from 'react';
-import './Sidebar.css';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { Flex, Button, Heading, Text, View } from '@aws-amplify/ui-react';
 
 interface SidebarProps {
   onToggle: () => void;
   isOpen: boolean;
-  userLoginId: string | undefined; // Add userLoginId prop
+  userLoginId?: string;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ onToggle, isOpen, userLoginId }) => {
   const createNewChat = () => {
-    // Logic to create a new chat
     console.log('New chat created');
   };
 
   return (
-    <div>
-      <div className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
-        <div className="sidebar-header">
-          <button className="toggle-button" onClick={onToggle}>
-            <FontAwesomeIcon icon={faBars} />
-            {/* <span className="button-text">Menu</span> */}
-          </button>
-          <button className="new-chat-button" onClick={createNewChat}>
-            <FontAwesomeIcon icon={faPlus} />
-            {/* <span className="button-text">New Chat</span> */}
-          </button>
-        </div>
-        <div className={`sidebar-content ${isOpen ? 'visible' : 'hidden'}`}>
-          {/* Add other sidebar content here */}
-          <div className="user-info">{userLoginId}'s Conversation</div> {/* Add user info */}
-        </div>
-      </div>
-    </div>
+    <View
+      width={isOpen ? '250px' : '0'}
+      height="100vh"
+      backgroundColor="neutral.100"
+      padding={isOpen ? '1rem' : '0'}
+      style={{
+        transition: 'width 0.3s ease',
+        overflow: 'hidden',
+        borderRight: '1px solid #ddd'
+      }}
+    >
+      {isOpen && (
+        <Flex direction="column" gap="1rem">
+          <Heading level={4}>Menu</Heading>
+          <Button onClick={onToggle} variation="primary">
+            Toggle Sidebar
+          </Button>
+          <Button onClick={createNewChat} variation="link">
+            New Chat
+          </Button>
+          <Text fontSize="small" color="neutral.600" marginTop="auto">
+            {userLoginId}'s Conversation
+          </Text>
+        </Flex>
+      )}
+    </View>
   );
 };
 

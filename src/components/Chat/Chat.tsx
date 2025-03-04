@@ -1,184 +1,153 @@
-/**
- * Client (Chat.tsx):
-• Opens a persistent WebSocket connection to API Gateway.
-• When a chat message is sent, the client triggers a REST API (or includes its connection ID
-  in the payload) so that your backend process knows where to stream responses.
- */
+import React, { useState, useEffect, useRef } from 'react';
+import useWebSocket from 'react-use-websocket';
+import { useAuthenticator } from '@aws-amplify/ui-react';
+import {
+  View,
+  Flex,
+  Button,
+  TextField,
+  Card,
+  Heading,
+  Text,
+  Divider,
+} from '@aws-amplify/ui-react';
+import Sidebar from '../Sidebar/Sidebar';
 
-  import React, { useState, useEffect, useRef } from 'react';
-  import './Chat.css';
-  import { useAuthenticator } from '@aws-amplify/ui-react';
-  import Sidebar from '../Sidebar/Sidebar';
-  import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-  import { faBars, faPlus, faCog, faCommentDots } from '@fortawesome/free-solid-svg-icons';
-  import ReactMarkdown from "react-markdown";
-  import remarkGfm from "remark-gfm";
-  import useWebSocket from 'react-use-websocket';
-  
-  interface Message {
-    id: number;
-    text: string;
-    sender: 'user' | 'bot';
-  }
-  
-  const WEBSOCKET_URL = "wss://sug5qgww0b.execute-api.us-west-2.amazonaws.com/Prod/";
-  
-  const Chat: React.FC = () => {
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [input, setInput] = useState('');
-    const { user, signOut } = useAuthenticator();
-    const [loading, setLoading] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [feedback, setFeedback] = useState('');
-    const chatEndRef = useRef<HTMLDivElement>(null);
-    const botMessageIdRef = useRef<number | null>(null); // Tracks current bot message ID
-  
-    useEffect(() => {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
-  
-    // ✅ WebSocket connection using `react-use-websocket`
-    const { sendMessage } = useWebSocket(WEBSOCKET_URL, {
-      shouldReconnect: () => true, // ✅ Auto-reconnect on disconnect
-      onMessage: (event) => {
-        const data = JSON.parse(event.data);
-        console.log("Received WebSocket message:", data);
-  
-        if (data.message) {
-          setMessages((prevMessages) => {
-            if (botMessageIdRef.current !== null) {
-              // ✅ Append new chunk to the existing bot message
-              return prevMessages.map((msg) =>
-                msg.id === botMessageIdRef.current
-                  ? { ...msg, text: msg.text + " " + data.message } // ✅ Append without buffering
-                  : msg
-              );
-            } else {
-              // ✅ Create a new bot message if one doesn't exist
-              const newBotMessage: Message = {
-                id: prevMessages.length + 1,
-                text: data.message,
-                sender: "bot",
-              };
-              botMessageIdRef.current = newBotMessage.id;
-              return [...prevMessages, newBotMessage];
-            }
-          });
-        }
-      },
-    });
-  
-    const sendChatMessage = () => {
-      if (!input.trim()) return;
-      setLoading(true);
-  
-      const userMessage: Message = {
-        id: messages.length + 1,
-        text: input,
-        sender: "user",
-      };
-  
-      setMessages((prevMessages) => [...prevMessages, userMessage]); // ✅ Functional update to prevent issues
-      setInput("");
-  
-      sendMessage(JSON.stringify({ action: "sendMessage", message: input }));
+interface LessonPlan {
+  title: string;
+  grade_level: string;
+  duration: string;
+  objectives: string[];
+  materials: string[];
+  activities: { name: string; duration: string }[];
+}
+
+interface Message {
+  id: number;
+  text?: string;
+  sender: 'user' | 'bot';
+  lessonPlan?: LessonPlan;
+}
+
+const WEBSOCKET_URL = "wss://sug5qgww0b.execute-api.us-west-2.amazonaws.com/Prod/";
+
+const LessonPlanCard = ({ plan }: { plan: LessonPlan }) => (
+  <Card variation="outlined" padding="1.5rem" margin="1rem 0">
+    <Heading level={4}>{plan.title}</Heading>
+    <Text>Grade Level: {plan.grade_level}</Text>
+    <Text>Duration: {plan.duration}</Text>
+
+    <Heading level={5} marginTop="1rem">Objectives</Heading>
+    <ul>
+      {plan.objectives.map((o, i) => <li key={i}>{o}</li>)}
+    </ul>
+
+    <Heading level={5} marginTop="1rem">Materials</Heading>
+    <ul>
+      {plan.materials.map((m, i) => <li key={i}>{m}</li>)}
+    </ul>
+
+    <Heading level={5} marginTop="1rem">Activities</Heading>
+    <ul>
+      {plan.activities.map((a, i) => <li key={i}>{a.name} - {a.duration}</li>)}
+    </ul>
+  </Card>
+);
+
+const Chat: React.FC = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const { user, signOut } = useAuthenticator();
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const { sendMessage } = useWebSocket(WEBSOCKET_URL, {
+    shouldReconnect: () => true,
+    onMessage: (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.lesson_plan) {
+        setMessages((prev) => [
+          ...prev,
+          { id: prev.length + 1, sender: "bot", lessonPlan: data.lesson_plan }
+        ]);
+      } else if (data.message) {
+        setMessages((prev) => [
+          ...prev,
+          { id: prev.length + 1, sender: "bot", text: data.message }
+        ]);
+      }
+    },
+  });
+
+  const handleSendMessage = () => {
+    if (!input.trim()) return;
+
+    setMessages((prev) => [
+      ...prev,
+      { id: prev.length + 1, sender: "user", text: input }
+    ]);
+
+    sendMessage(JSON.stringify({ action: "sendMessage", message: input }));
+    setInput('');
+  };
+
+  return (
+    <Flex className="h-screen" direction="row">
+      <Sidebar
+        isOpen
+        onToggle={() => {}}
+        userLoginId={user?.signInDetails?.loginId}
+      />
       
-      botMessageIdRef.current = null; // ✅ Reset bot message tracking for next response
-    };
+      <Flex direction="column" flex="1" height="100%">
+        <Flex 
+          justifyContent="space-between" 
+          padding="1rem" 
+          style={{ borderBottom: '1px solid #ddd' }}
+        >
+          <Heading level={3}>Chat</Heading>
+          <Button onClick={signOut} variation="destructive">Sign out</Button>
+        </Flex>
 
-  const handleSidebarToggle = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const handleFeedbackToggle = () => {
-    setIsFeedbackOpen(!isFeedbackOpen);
-  };
-
-  const handleSettingsToggle = () => {
-    setIsSettingsOpen(!isSettingsOpen);
-  };
-
-  const handleFeedbackSubmit = () => {
-    console.log('Feedback submitted:', feedback);
-    setIsFeedbackOpen(false);
-    setFeedback('');
-    // Logic to submit feedback 
-  };
-
-  const createNewChat = () => {
-    console.log('New chat created');
-    setMessages([]);
-    botMessageIdRef.current = null;
-    // Logic to create new chat
-  };
-  
-    return (
-      <div className={`chat-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-        <Sidebar onToggle={handleSidebarToggle} isOpen={isSidebarOpen} userLoginId={user?.signInDetails?.loginId} />
-        <div className="chat-header">
-          <div className="left-buttons">
-            {!isSidebarOpen && (
-              <>
-                <button className="toggle-button" onClick={handleSidebarToggle}>
-                  <FontAwesomeIcon icon={faBars} />
-                </button>
-                <button className="new-chat-button" onClick={createNewChat}>
-                  <FontAwesomeIcon icon={faPlus} />
-                </button>
-              </>
-            )}
-          </div>
-          <div className="right-buttons">
-            <button className="feedback-button" onClick={handleFeedbackToggle}>
-              <FontAwesomeIcon icon={faCommentDots} />
-            </button>
-            <button className="settings-button" onClick={handleSettingsToggle}>
-              <FontAwesomeIcon icon={faCog} />
-            </button>
-            <button className="sign-out-button" onClick={signOut}>Sign out</button>
-          </div>
-        </div>
-        <div className="messages">
+        <View padding="1rem" overflow="auto" flex="1">
           {messages.map((message) => (
-            <div key={message.id} className={`message ${message.sender}`}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
-            </div>
+            <View
+              key={message.id}
+              marginBottom="1rem"
+              textAlign={message.sender === 'user' ? 'right' : 'left'}
+            >
+              {message.lessonPlan ? (
+                <LessonPlanCard plan={message.lessonPlan} />
+              ) : (
+                <Card variation="outlined" padding="1rem">
+                  <Text>{message.text}</Text>
+                </Card>
+              )}
+            </View>
           ))}
           <div ref={chatEndRef} />
-        </div>
-        <div className="input-container">
-          <input
-            type="text"
+        </View>
+
+        <Divider />
+        
+        <Flex padding="1rem" as="form" onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}>
+          <TextField
+            label="Message"
+            labelHidden
+            placeholder="Type your message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
+            flex="1"
           />
-          <button onClick={sendChatMessage} disabled={loading}>
-            {loading ? 'Sending...' : 'Send'}
-          </button>
-        </div>
-        {isFeedbackOpen && (
-          <div className="feedback-popup">
-            <h3>Feedback</h3>
-            <textarea
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Enter your feedback here..."
-            />
-            <button onClick={handleFeedbackSubmit}>Submit</button>
-          </div>
-        )}
-        {isSettingsOpen && (
-          <div className="settings-popup">
-            <h3>Settings</h3>
-            <p>Settings content goes here...</p>
-            <button onClick={handleSettingsToggle}>Close</button>
-          </div>
-        )}
-      </div>
-    );
-  };
-  
-  export default Chat;
+          <Button type="submit" marginLeft="0.5rem">Send</Button>
+        </Flex>
+      </Flex>
+    </Flex>
+  );
+};
+
+export default Chat;
