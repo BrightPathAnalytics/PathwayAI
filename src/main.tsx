@@ -47,6 +47,9 @@ const formFields = {
   },
 };
 
+// Export a dummy function to make Fast Refresh work
+export const enableFastRefresh = () => {};
+
 // Render the authenticated app
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

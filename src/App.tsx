@@ -8,6 +8,7 @@ import ReportsPage from "./app/reports/page";
 import AuthTest from "./app/auth-test";
 import { Layout } from "./components/layout";
 
+// Simplify the App component to be more similar to the previously working implementation
 function App() {
   return (
     <BrowserRouter>
