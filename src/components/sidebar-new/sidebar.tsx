@@ -20,7 +20,6 @@ import {
   SidebarNav,
   SidebarNavItem,
   SidebarToggle,
-  useSidebar,
 } from "@/components/ui/sidebar"
 import { useLocation } from "react-router-dom"
 
@@ -59,7 +58,6 @@ const navigationItems = [
 
 export function Sidebar() {
   const location = useLocation()
-  const { toggleSidebar } = useSidebar()
 
   return (
     <SidebarComponent>
@@ -122,4 +120,4 @@ export function Sidebar() {
       </SidebarFooter>
     </SidebarComponent>
   )
-}
+} 

@@ -1,10 +1,10 @@
-import Chat from './components/Chat/Chat';
+import { ChatInterface } from './components/assistant/chat-interface';
 
 function App() {
   return (
-    <main>
-      <Chat />
-    </main>
+    <div className="flex-1 overflow-hidden">
+      <ChatInterface />
+    </div>
   );
 }
 

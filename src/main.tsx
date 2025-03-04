@@ -1,7 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { Authenticator } from "@aws-amplify/ui-react";
-import App from "./App";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import SheetsPage from "./app/sheets/page";
+import SchedulePage from "./app/schedule/page";
+import HomePage from "./app/home/page";
+import HelpPage from "./app/help/page";
+import AssistantPage from "./app/assistant/page";
+import ReportsPage from "./app/reports/page";
+import { Layout } from "./components/layout";
 import "./index.css";
 import "@aws-amplify/ui-react/styles.css";
 import { Amplify } from "aws-amplify";
@@ -47,10 +54,22 @@ const formFields = {
   },
 };
 
+// Wrap the App component with BrowserRouter and define routes
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Authenticator formFields={formFields}>
-      <App />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<HomePage />} />
+            <Route path="assistant" element={<AssistantPage />} />
+            <Route path="sheets" element={<SheetsPage />} />
+            <Route path="schedule" element={<SchedulePage />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
     </Authenticator>
   </React.StrictMode>
 );
