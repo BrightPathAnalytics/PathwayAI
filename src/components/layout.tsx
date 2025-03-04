@@ -10,26 +10,28 @@ export function Layout() {
   return (
     <ThemeProvider defaultTheme="light">
       <SidebarProvider>
-        <div className="flex h-screen bg-background">
-          <Sidebar />
-          <main className="flex-1 overflow-hidden">
-            <div className="flex h-full flex-col">
-              <header className="border-b p-4 flex justify-between items-center">
-                <h1 className="text-xl font-semibold">Pathway AI</h1>
-                <button 
-                  onClick={signOut} 
-                  className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90"
-                >
-                  Sign out
-                </button>
-              </header>
-              <div className="flex-1 overflow-auto">
-                <Outlet />
+        <>
+          <div className="flex h-screen bg-background">
+            <Sidebar />
+            <main className="flex-1 overflow-hidden">
+              <div className="flex h-full flex-col">
+                <header className="border-b p-4 flex justify-between items-center">
+                  <h1 className="text-xl font-semibold">Pathway AI</h1>
+                  <button 
+                    onClick={signOut} 
+                    className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90"
+                  >
+                    Sign out
+                  </button>
+                </header>
+                <div className="flex-1 overflow-auto">
+                  <Outlet /> || <div>Loading...</div>
+                </div>
               </div>
-            </div>
-          </main>
-        </div>
+            </main>
+          </div>
+        </>
       </SidebarProvider>
     </ThemeProvider>
   );
-} 
+}
