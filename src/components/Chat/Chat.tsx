@@ -11,7 +11,7 @@ import {
   Text,
   Divider,
 } from '@aws-amplify/ui-react';
-import Sidebar from '../Sidebar/Sidebar';
+import { Sidebar } from '../Sidebar/Sidebar';
 
 interface LessonPlan {
   title: string;
@@ -57,7 +57,7 @@ const LessonPlanCard = ({ plan }: { plan: LessonPlan }) => (
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const { user, signOut } = useAuthenticator();
+  const { signOut } = useAuthenticator();
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -97,11 +97,7 @@ const Chat: React.FC = () => {
 
   return (
     <Flex className="h-screen" direction="row">
-      <Sidebar
-        isOpen
-        onToggle={() => {}}
-        userLoginId={user?.signInDetails?.loginId}
-      />
+      <Sidebar />
       
       <Flex direction="column" flex="1" height="100%">
         <Flex 

@@ -1,26 +1,23 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent } from "@/components/ui/card"
 import type { Event } from "@/components/schedule/schedule-store"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import type { DateRange } from "react-day-picker"
 import { format } from "date-fns"
 
 interface MonthlyViewProps {
   events: Event[]
   selectedDate: Date
   onDateSelect: (date: Date) => void
-  dateRange: DateRange | undefined
-  setDateRange: (range: DateRange | undefined) => void
 }
 
-export function MonthlyView({ events, selectedDate, onDateSelect, dateRange, setDateRange }: MonthlyViewProps) {
+export function MonthlyView({ events, selectedDate, onDateSelect }: MonthlyViewProps) {
   const [month, setMonth] = useState<Date>(new Date())
 
-  // Group events by date - memoize this computation to prevent unnecessary recalculations
+  // Group events by date
   const eventsByDate = events.reduce(
     (acc, event) => {
       const dateStr = new Date(event.startTime).toDateString()
@@ -32,55 +29,6 @@ export function MonthlyView({ events, selectedDate, onDateSelect, dateRange, set
     },
     {} as Record<string, Event[]>,
   )
-
-  // Use useCallback to memoize the renderDay function
-  const renderDay = useCallback(
-    (day: Date) => {
-      const dateStr = day.toDateString()
-      const dayEvents = eventsByDate[dateStr] || []
-      const hasEvents = dayEvents.length > 0
-
-      // Group events by type for the badges
-      const eventTypes = dayEvents.reduce((types, event) => {
-        if (!types.includes(event.type)) {
-          types.push(event.type)
-        }
-        return types
-      }, [] as string[])
-
-      return (
-        <div className="relative h-full w-full p-2">
-          <time
-            dateTime={format(day, "yyyy-MM-dd")}
-            className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full",
-              selectedDate.toDateString() === dateStr && "bg-primary text-primary-foreground",
-            )}
-          >
-            {format(day, "d")}
-          </time>
-          {hasEvents && (
-            <div className="mt-1 flex flex-wrap gap-1">
-              {eventTypes.map((type) => (
-                <div
-                  key={type}
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    type === "duty" && "bg-red-500",
-                    type === "meeting" && "bg-blue-500",
-                    type === "class" && "bg-green-500",
-                    type === "personal" && "bg-purple-500",
-                    type === "other" && "bg-gray-500",
-                  )}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )
-    },
-    [eventsByDate, selectedDate],
-  ) // Add dependencies
 
   return (
     <div className="space-y-4">
@@ -95,20 +43,6 @@ export function MonthlyView({ events, selectedDate, onDateSelect, dateRange, set
                 month={month}
                 onMonthChange={setMonth}
                 className="w-full"
-                components={{
-                  Day: ({ date, ...props }) => (
-                    <button
-                      {...props}
-                      className={cn(
-                        props.className,
-                        "h-14 w-full p-0",
-                        date?.toDateString() === selectedDate.toDateString() && "bg-muted",
-                      )}
-                    >
-                      {date ? renderDay(date) : null}
-                    </button>
-                  ),
-                }}
               />
             </CardContent>
           </Card>
