@@ -8,6 +8,7 @@ import HomePage from "./app/home/page";
 import HelpPage from "./app/help/page";
 import AssistantPage from "./app/assistant/page";
 import ReportsPage from "./app/reports/page";
+import AuthTest from "./app/auth-test";
 import { Layout } from "./components/layout";
 import "./index.css";
 import "@aws-amplify/ui-react/styles.css";
@@ -68,6 +69,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="help" element={<HelpPage />} />
             <Route path="reports" element={<ReportsPage />} />
           </Route>
+          <Route path="/auth-test" element={<AuthTest />} />
         </Routes>
       </BrowserRouter>
     </Authenticator>

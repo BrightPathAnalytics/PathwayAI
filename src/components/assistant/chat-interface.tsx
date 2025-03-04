@@ -6,12 +6,17 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChatMessage } from "@/components/assistant/chat-message"
 import { SuggestedPrompt } from "@/components/assistant/suggested-prompt"
+import useWebSocket from "react-use-websocket"
+import { LessonPlanCard, LessonPlan } from "@/components/assistant/lesson-plan"
+import { getWebSocketUrl, formatMessage, parseWebSocketMessage } from "@/services/websocket-service"
 
+// Define Message type
 type Message = {
   id: string
   role: "user" | "assistant" | "system"
   content: string
   timestamp: Date
+  lessonPlan?: LessonPlan // Add lessonPlan property to support structured data
 }
 
 const initialMessages: Message[] = [
@@ -55,6 +60,48 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Initialize WebSocket connection
+  const { sendMessage } = useWebSocket(getWebSocketUrl(), {
+    shouldReconnect: () => true,
+    onMessage: (event) => {
+      try {
+        const data = parseWebSocketMessage(event.data)
+        if (!data) return
+        
+        // Handle lesson plan data from WebSocket
+        if (data.lesson_plan) {
+          const assistantMessage: Message = {
+            id: String(messages.length + 1),
+            role: "assistant",
+            content: "I've created a lesson plan for you:",
+            timestamp: new Date(),
+            lessonPlan: data.lesson_plan as LessonPlan
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          setIsLoading(false)
+        } 
+        // Handle regular text messages
+        else if (data.message) {
+          const assistantMessage: Message = {
+            id: String(messages.length + 1),
+            role: "assistant",
+            content: data.message as string,
+            timestamp: new Date(),
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          setIsLoading(false)
+        }
+      } catch (error) {
+        console.error("Error handling WebSocket message:", error)
+        setIsLoading(false)
+      }
+    },
+    onError: (error) => {
+      console.error("WebSocket error:", error)
+      setIsLoading(false)
+    }
+  })
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -77,18 +124,13 @@ export function ChatInterface() {
     setInput("")
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      const botResponse = generateDummyResponse()
-      const assistantMessage: Message = {
-        id: String(messages.length + 2),
-        role: "assistant",
-        content: botResponse,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, assistantMessage])
+    // Send message to WebSocket API
+    try {
+      sendMessage(formatMessage(input))
+    } catch (error) {
+      console.error("Error sending message:", error)
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   const handlePromptClick = (promptText: string) => {
@@ -113,7 +155,10 @@ export function ChatInterface() {
             <ScrollArea className="h-full pr-4">
               <div className="flex flex-col space-y-4">
                 {messages.map((message) => (
-                  <ChatMessage key={message.id} message={message} />
+                  <div key={message.id}>
+                    <ChatMessage message={message} />
+                    {message.lessonPlan && <LessonPlanCard plan={message.lessonPlan} />}
+                  </div>
                 ))}
                 {isLoading && (
                   <ChatMessage
@@ -162,7 +207,8 @@ export function ChatInterface() {
             variant="outline"
             className="shrink-0"
             onClick={() => {
-              // Handle new chat
+              // Handle new chat - reset messages to initial state
+              setMessages(initialMessages)
             }}
           >
             <PlusCircle className="h-4 w-4" />
@@ -174,7 +220,7 @@ export function ChatInterface() {
             onChange={(e) => setInput(e.target.value)}
             className="flex-1"
           />
-          <Button type="submit" size="icon" className="shrink-0">
+          <Button type="submit" size="icon" className="shrink-0" disabled={isLoading}>
             <Send className="h-4 w-4" />
             <span className="sr-only">Send</span>
           </Button>
@@ -182,15 +228,4 @@ export function ChatInterface() {
       </div>
     </div>
   )
-}
-
-function generateDummyResponse(): string {
-  const responses = [
-    "I've created a detailed lesson plan for you. It includes objectives, materials needed, and a step-by-step guide for the class period.",
-    "Based on the test scores you provided, I can see that there are a few students who might need additional support. The average score is 73.7, with 3 students scoring below 60.",
-    "Here's a 10-question quiz on the requested topic. Each question includes multiple-choice options and an answer key.",
-    "I've analyzed the data and created a visualization that shows the trends you're interested in. There's a clear pattern emerging in the second quarter.",
-    "I've drafted an email template for you. Feel free to modify it as needed before sending it to parents.",
-  ]
-  return responses[Math.floor(Math.random() * responses.length)]
 } 

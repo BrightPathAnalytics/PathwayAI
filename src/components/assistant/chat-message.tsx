@@ -2,12 +2,23 @@ import { formatDistanceToNow } from "date-fns"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
+// Define LessonPlan interface to match the one in chat-interface.tsx
+interface LessonPlan {
+  title: string
+  grade_level: string
+  duration: string
+  objectives: string[]
+  materials: string[]
+  activities: { name: string; duration: string }[]
+}
+
 interface ChatMessageProps {
   message: {
     id: string
     role: "user" | "assistant" | "system"
     content: string
     timestamp: Date
+    lessonPlan?: LessonPlan // Add lessonPlan property
   }
   isLoading?: boolean
 }
