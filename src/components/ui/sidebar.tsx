@@ -26,7 +26,7 @@ import {
   SIDEBAR_WIDTH_MOBILE, 
   SIDEBAR_WIDTH_ICON, 
   SIDEBAR_KEYBOARD_SHORTCUT 
-} from "../../hooks/use-sidebar"
+} from "@/hooks/use-sidebar"
 
 const SIDEBAR_WIDTH = "16rem"
 
