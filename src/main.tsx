@@ -59,19 +59,21 @@ const formFields = {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Authenticator formFields={formFields}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<HomePage />} />
-            <Route path="assistant" element={<AssistantPage />} />
-            <Route path="sheets" element={<SheetsPage />} />
-            <Route path="schedule" element={<SchedulePage />} />
-            <Route path="help" element={<HelpPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-          </Route>
-          <Route path="/auth-test" element={<AuthTest />} />
-        </Routes>
-      </BrowserRouter>
+      {() => (
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<HomePage />} />
+              <Route path="assistant" element={<AssistantPage />} />
+              <Route path="sheets" element={<SheetsPage />} />
+              <Route path="schedule" element={<SchedulePage />} />
+              <Route path="help" element={<HelpPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+            </Route>
+            <Route path="/auth-test" element={<AuthTest />} />
+          </Routes>
+        </BrowserRouter>
+      )}
     </Authenticator>
   </React.StrictMode>
 );
