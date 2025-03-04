@@ -39,7 +39,7 @@ export function MonthlyView({ events, selectedDate, onDateSelect }: MonthlyViewP
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={(date) => date && onDateSelect(date)}
+                onSelect={(date: Date | undefined) => date && onDateSelect(date)}
                 month={month}
                 onMonthChange={setMonth}
                 className="w-full"
